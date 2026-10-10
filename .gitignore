@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Kết quả chạy và dữ liệu lớn không đưa lên git
+output/
+data/
+*.pcap
+*.pcapng
