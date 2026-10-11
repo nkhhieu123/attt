@@ -1,0 +1,58 @@
+# C01-T02 — Đầu ra ba module
+
+Ba module: **anomaly**, **attack classification**, **botnet/topology**. Tên
+module và tập nhãn được khai báo trong `src/nids/scope.py`; định dạng cảnh báo
+nằm trong `src/nids/alerts.py`.
+
+## 1. Ba module
+
+| Module | Mã (`module`) | Phương pháp | Đầu ra |
+|---|---|---|---|
+| Anomaly | `anomaly` | Gaussian đa biến học từ traffic bình thường | Bình thường/bất thường và điểm bất thường |
+| Attack classification | `attack_classification` | Random Forest, so sánh với Logistic Regression | Nhãn dự đoán: Benign, Port Scan, DoS |
+| Botnet/topology | `botnet_topology` | Đặc trưng beaconing và đồ thị giao tiếp | Host nghi vấn; cấu trúc tập trung/ngang hàng |
+
+Ba module chạy song song trên cùng luồng đặc trưng. Module anomaly **không**
+là cổng lọc bắt buộc cho hai module còn lại.
+
+## 2. Tập nhãn
+
+| Module | Nhãn (`label`) | Nhãn sinh cảnh báo |
+|---|---|---|
+| `anomaly` | `normal`, `anomaly` | `anomaly` |
+| `attack_classification` | `benign`, `port_scan`, `dos` | `port_scan`, `dos` |
+| `botnet_topology` (host) | `normal_host`, `suspect_host` | `suspect_host` |
+| `botnet_topology` (topology) | `centralized`, `p2p`, `none` | `centralized`, `p2p` |
+
+- Module botnet/topology có hai nhóm đầu ra. Nhóm host đánh giá ở mức
+  host–cửa sổ; nhóm topology đánh giá bằng confusion matrix riêng. Hai kết quả
+  không gộp vào nhau.
+- Cảnh báo botnet thể hiện mức nghi vấn, không khẳng định có mã độc.
+- `dos` là DoS từ một nguồn.
+
+## 3. Định dạng cảnh báo
+
+Bản đầu tiên chỉ xuất ra **terminal** và **file CSV** (`output/alerts.csv`).
+Mọi module dùng chung một schema:
+
+| Cột | Ý nghĩa |
+|---|---|
+| `module` | `anomaly`, `attack_classification` hoặc `botnet_topology` |
+| `label` | Nhãn dự đoán theo bảng ở mục 2 |
+| `window_start`, `window_end` | Cửa sổ quan sát (UTC, ISO 8601) |
+| `src_ip` | Host nguồn / host nghi vấn |
+| `dst_ip` | Host đích / node trung tâm |
+| `score` | Điểm bất thường hoặc xác suất của mô hình |
+| `threshold` | Ngưỡng quyết định (nếu có) |
+| `run_id` | Mã lần chạy, khớp với nhật ký kịch bản |
+| `detail` | Ghi chú thêm |
+| `created_at` | Thời điểm phát cảnh báo, dùng để tính độ trễ phát hiện |
+
+Dạng một dòng trên terminal:
+
+```
+<created_at> | [module] | LABEL | src -> dst | score=... (ngưỡng ...) | run=... | detail
+```
+
+Mặc định chỉ dự đoán là cảnh báo mới được ghi. Bật `log_all` để lưu cả dự đoán
+bình thường vào CSV, cần cho việc tính báo động giả và confusion matrix.

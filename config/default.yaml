@@ -1,0 +1,42 @@
+# Cấu hình chung của hệ thống. Huấn luyện và realtime đọc cùng file này.
+# Tên module và tập nhãn không nằm ở đây mà ở src/nids/scope.py.
+
+capture:
+  interface: eth0            # giao diện giám sát trên Kali, chỉnh theo lab
+  pcap_dir: data/pcap
+
+# Cửa sổ ban đầu; chỉnh trên tập validation rồi giữ cố định khi kiểm thử.
+windows:
+  flow:                      # đặc trưng flow/host
+    size_s: 10
+    step_s: 2
+  graph:                     # đặc trưng beaconing/đồ thị
+    size_s: 120
+    step_s: 10
+
+flow:
+  idle_timeout_s: 60         # tạm thời, xem QĐ-006
+
+lab:
+  subnet: 192.168.50.0/24
+  hosts:
+    192.168.50.10: Máy giám sát Kali Linux
+    192.168.50.20: Máy thử nghiệm
+    192.168.50.30: Máy chủ dịch vụ
+    192.168.50.41: Client/Bot mô phỏng 1
+    192.168.50.42: Client/Bot mô phỏng 2
+    192.168.50.43: Client/Bot mô phỏng 3
+    192.168.50.50: Server điều phối mô phỏng
+
+paths:
+  data_dir: data
+  model_dir: models
+  output_dir: output
+  run_log_dir: data/run_logs  # nhật ký lần chạy, cơ sở gán nhãn
+
+alerts:
+  channels: [terminal, csv]  # bản đầu tiên chưa có dashboard
+  csv_path: output/alerts.csv
+  log_all: false             # true: lưu cả dự đoán bình thường vào CSV
+
+random_seed: 42

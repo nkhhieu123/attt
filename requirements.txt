@@ -1,0 +1,8 @@
+# Thư viện chạy hệ thống. Cài kèm gói dự án: pip install -e .
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+scapy>=2.5
+networkx>=3.2
+PyYAML>=6.0
+joblib>=1.3

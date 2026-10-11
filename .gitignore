@@ -1,11 +1,25 @@
+# Python
 __pycache__/
 *.pyc
+*.egg-info/
+build/
+dist/
 .venv/
 venv/
 .ipynb_checkpoints/
 
-# Kết quả chạy và dữ liệu lớn không đưa lên git
-output/
-data/
+# Dữ liệu, mô hình và kết quả chạy không đưa lên git (giữ lại thư mục)
+data/*
+models/*
+output/*
+!data/.gitkeep
+!models/.gitkeep
+!output/.gitkeep
 *.pcap
 *.pcapng
+
+# Hệ điều hành và trình soạn thảo
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

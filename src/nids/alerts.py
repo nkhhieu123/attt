@@ -1,6 +1,6 @@
 """Định dạng cảnh báo và kênh xuất của bản đầu tiên: terminal + file CSV.
 
-Cả ba module (anomaly, classifier, botnet) đều phát cảnh báo qua cùng một
+Cả ba module (anomaly, attack_classification, botnet_topology) đều phát cảnh báo qua cùng một
 schema để có thể hợp nhất vào một file và đối chiếu với nhật ký kịch bản.
 """
 
@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import scope
+from .config import load_config
 
 
 @dataclass
@@ -93,7 +94,7 @@ class AlertSink:
     dự đoán bình thường (cần cho việc tính báo động giả và confusion matrix).
     """
 
-    def __init__(self, csv_path=scope.DEFAULT_ALERT_CSV, stream=None, log_all=False):
+    def __init__(self, csv_path="output/alerts.csv", stream=None, log_all=False):
         self.csv_path = Path(csv_path) if csv_path else None
         self.stream = stream if stream is not None else sys.stdout
         self.log_all = log_all
@@ -133,16 +134,17 @@ class AlertSink:
 
 def _demo_alerts(now: float) -> list[Alert]:
     """Cảnh báo MẪU để kiểm tra định dạng. Không phải kết quả thực nghiệm."""
-    flow, graph = scope.FLOW_WINDOW.size_s, scope.GRAPH_WINDOW.size_s
+    windows = load_config()["windows"]
+    flow, graph = windows["flow"]["size_s"], windows["graph"]["size_s"]
     run = "MAU-DINH-DANG"
     return [
         Alert(scope.MODULE_ANOMALY, "anomaly", now - flow, now,
               src_ip="192.168.50.20", dst_ip="192.168.50.30",
               score=42.7, threshold=18.3, run_id=run, detail="mẫu định dạng"),
-        Alert(scope.MODULE_CLASSIFIER, "port_scan", now - flow, now,
+        Alert(scope.MODULE_ATTACK, "port_scan", now - flow, now,
               src_ip="192.168.50.20", dst_ip="192.168.50.30",
               score=0.97, run_id=run, detail="mẫu định dạng"),
-        Alert(scope.MODULE_CLASSIFIER, "dos", now - flow, now,
+        Alert(scope.MODULE_ATTACK, "dos", now - flow, now,
               src_ip="192.168.50.20", dst_ip="192.168.50.30",
               score=0.91, run_id=run, detail="mẫu định dạng"),
         Alert(scope.MODULE_BOTNET, "suspect_host", now - graph, now,

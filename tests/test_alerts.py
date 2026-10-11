@@ -19,11 +19,13 @@ class ScopeTest(unittest.TestCase):
     def test_three_modules_with_labels(self):
         self.assertEqual(len(scope.MODULES), 3)
         self.assertEqual(set(scope.LABELS), set(scope.MODULES))
-        self.assertEqual(scope.CLASSIFIER_LABELS, ("benign", "port_scan", "dos"))
+        self.assertEqual(scope.ATTACK_LABELS, ("benign", "port_scan", "dos"))
         self.assertEqual([s.name for s in scope.MODULE_SPECS], list(scope.MODULES))
 
-    def test_first_version_has_no_dashboard(self):
-        self.assertEqual(scope.OUTPUT_CHANNELS, ("terminal", "csv"))
+    def test_module_names(self):
+        self.assertEqual(
+            scope.MODULES, ("anomaly", "attack_classification", "botnet_topology")
+        )
 
 
 class AlertTest(unittest.TestCase):
@@ -36,8 +38,8 @@ class AlertTest(unittest.TestCase):
             Alert(scope.MODULE_ANOMALY, "anomaly", window_start=10, window_end=5)
 
     def test_is_alert(self):
-        self.assertTrue(make(scope.MODULE_CLASSIFIER, "port_scan").is_alert)
-        self.assertFalse(make(scope.MODULE_CLASSIFIER, "benign").is_alert)
+        self.assertTrue(make(scope.MODULE_ATTACK, "port_scan").is_alert)
+        self.assertFalse(make(scope.MODULE_ATTACK, "benign").is_alert)
         self.assertFalse(make(scope.MODULE_BOTNET, "none").is_alert)
 
     def test_format_line(self):
@@ -61,8 +63,8 @@ class SinkTest(unittest.TestCase):
             path = Path(tmp) / "sub" / "alerts.csv"
             out = io.StringIO()
             with AlertSink(path, stream=out) as sink:
-                self.assertTrue(sink.emit(make(scope.MODULE_CLASSIFIER, "dos", score=0.9)))
-                self.assertFalse(sink.emit(make(scope.MODULE_CLASSIFIER, "benign")))
+                self.assertTrue(sink.emit(make(scope.MODULE_ATTACK, "dos", score=0.9)))
+                self.assertFalse(sink.emit(make(scope.MODULE_ATTACK, "benign")))
             rows = self.read(path)
             self.assertEqual(len(rows), 1)
             self.assertEqual(list(rows[0]), CSV_COLUMNS)

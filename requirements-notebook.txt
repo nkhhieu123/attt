@@ -1,0 +1,4 @@
+# Thêm cho notebook huấn luyện và đánh giá.
+-r requirements.txt
+jupyter>=1.0
+matplotlib>=3.8
