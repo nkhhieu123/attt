@@ -24,6 +24,10 @@ Bản đầu tiên chỉ xuất cảnh báo ra terminal và file CSV; dashboard 
 
 Báo cáo: [docs/Bao_cao_tien_do_Chang_1.docx](docs/Bao_cao_tien_do_Chang_1.docx)
 
+### Chặng 2
+
+- [x] C02-T01: Mô tả Global Header, Packet Header, Packet Data của PCAP; phân biệt với PCAPNG — [docs/04_dinh_dang_pcap.md](docs/04_dinh_dang_pcap.md)
+
 ## Cấu trúc
 
 ```
