@@ -14,7 +14,7 @@ Bản đầu tiên chỉ xuất cảnh báo ra terminal và file CSV; dashboard 
 
 ## Tiến độ
 
-Kế hoạch triển khai (12 chặng, 82 task): [docs/Ke_hoach_trien_khai.docx](docs/Ke_hoach_trien_khai.docx)
+Kế hoạch triển khai (12 chặng, 82 task): [docs/Ke_hoach_trien_khai.md](docs/Ke_hoach_trien_khai.md)
 
 ### Chặng 1 — Chốt yêu cầu và khởi tạo dự án
 
@@ -26,7 +26,7 @@ Kế hoạch triển khai (12 chặng, 82 task): [docs/Ke_hoach_trien_khai.docx]
 
 Báo cáo: [docs/Bao_cao_tien_do_Chang_1.docx](docs/Bao_cao_tien_do_Chang_1.docx)
 
-### Chặng 2
+### Chặng 2 — Khảo sát dữ liệu và định dạng
 
 - [x] C02-T01: Mô tả Global Header, Packet Header, Packet Data của PCAP; phân biệt với PCAPNG — [docs/04_dinh_dang_pcap.md](docs/04_dinh_dang_pcap.md)
 - [x] C02-T02: Chọn một loại log dịch vụ: access log của Nginx — [docs/05_log_dich_vu.md](docs/05_log_dich_vu.md)
