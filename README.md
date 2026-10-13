@@ -32,15 +32,19 @@ Báo cáo: [docs/Bao_cao_tien_do_Chang_1.docx](docs/Bao_cao_tien_do_Chang_1.docx
 - [x] C02-T02: Chọn một loại log dịch vụ: access log của Nginx — [docs/05_log_dich_vu.md](docs/05_log_dich_vu.md)
 - [x] C02-T03: Chọn tập con CIC-IDS2017 cho phân loại — [docs/06_cic_ids2017.md](docs/06_cic_ids2017.md)
 - [x] C02-T04: Kiểm tra các scenario CTU-13, file khả dụng và ý nghĩa nhãn — [docs/07_ctu13.md](docs/07_ctu13.md)
+- [x] C02-T05: Tạo manifest: nguồn, file, thời gian, nhãn, mục đích sử dụng — `config/data_manifest.csv`, `src/nids/manifest.py`, [docs/08_manifest_du_lieu.md](docs/08_manifest_du_lieu.md)
+- [x] C02-T06: Chốt dữ liệu còn phải tự thu trong lab — [docs/09_du_lieu_lab.md](docs/09_du_lieu_lab.md)
 
 ## Cấu trúc
 
 ```
 config/default.yaml   Cấu hình chung: cửa sổ, timeout, địa chỉ lab, đường dẫn
+config/data_manifest.csv  Manifest dữ liệu: nguồn, file, nhãn, mục đích
 docs/                 Yêu cầu, đầu ra module, nhật ký quyết định, báo cáo
 src/nids/
   scope.py            Tên module và tập nhãn
   config.py           Đọc cấu hình
+  manifest.py         Đọc và kiểm tra manifest dữ liệu
   alerts.py           Schema cảnh báo, xuất terminal + CSV
 tests/                Kiểm thử
 scripts/              Script đọc PCAP, sinh traffic mô phỏng (chưa có)

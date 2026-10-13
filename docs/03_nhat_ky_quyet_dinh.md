@@ -83,3 +83,17 @@ Mẫu:
 - Bối cảnh: Mỗi scenario CTU-13 phát hành nhiều dạng file với hai kiểu nhãn khác nhau; PCAP đầy đủ của toàn mạng không được công bố.
 - Quyết định: Dùng file `.binetflow` trong `detailed-bidirectional-flow-labels/` của cả 13 scenario. Chỉ flow `From-Botnet` là độc hại. Host bot có flow `From-Botnet` trong cửa sổ là `suspect_host`; ba máy bình thường đã xác nhận là `normal_host`; host Background không đưa vào đánh giá (xem `docs/07_ctu13.md`). Không tải các file mẫu mã độc.
 - Hệ quả: Đặc trưng của module botnet phải tính được từ bản ghi flow. Chỉ scenario 12 là P2P nên topology ngang hàng phải đánh giá bằng dữ liệu lab. Điểm xuất phát cho việc tách là cách chia của bài báo gốc; scenario làm validation chưa chốt.
+
+## QĐ-011 — Manifest dữ liệu là một file CSV trong config
+- Ngày: 14/10/2026
+- Trạng thái: Đã chốt
+- Bối cảnh: Dữ liệu đến từ ba nguồn với định dạng và cách gán nhãn khác nhau; cần một nơi ghi dữ liệu nào phục vụ bài toán nào.
+- Quyết định: Ghi vào `config/data_manifest.csv`, đọc và kiểm tra bằng `nids.manifest.load_manifest()` (xem `docs/08_manifest_du_lieu.md`). Mỗi dòng ghi nguồn gốc thật của dữ liệu; NETRESEC là trang danh mục nên không được ghi là nguồn. Dữ liệu lab ghi theo biến thể kịch bản, từng lần chạy ghi trong nhật ký lần chạy.
+- Hệ quả: Khi tải hoặc thu xong dữ liệu phải cập nhật cột `trang_thai`. Nhãn trong manifest phải thuộc tập nhãn của `src/nids/scope.py`.
+
+## QĐ-012 — Dữ liệu tự thu trong lab
+- Ngày: 14/10/2026
+- Trạng thái: Tạm thời
+- Bối cảnh: CIC-IDS2017 không có DoS kiểu SYN/ICMP và thuộc mạng khác; CTU-13 chỉ có một scenario ngang hàng; không dataset nào có đối chứng lành tính.
+- Quyết định: Thu 11 biến thể của năm kịch bản (xem `docs/09_du_lieu_lab.md`). DoS dùng SYN; ICMP và DDoS nhiều nguồn là tùy chọn. Mỗi biến thể tối thiểu 1 lần chạy `train`, 1 lần `val`, 3 lần `test`; vai trò ghi trước khi chạy. Mã lần chạy dạng `<mã biến thể>-<vai trò>-<số thứ tự>`.
+- Hệ quả: Tối thiểu 55 lần chạy, khoảng 8 giờ thu. Tham số tốc độ quét, ba mức tải DoS và chu kỳ beaconing chưa chốt, phải ghi vào cấu hình trước lần chạy đầu tiên. Các lần chạy `test` thu sau khi mô hình và ngưỡng đã khóa.
