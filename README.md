@@ -16,6 +16,8 @@ Bản đầu tiên chỉ xuất cảnh báo ra terminal và file CSV; dashboard 
 
 Kế hoạch triển khai (12 chặng, 82 task): [docs/Ke_hoach_trien_khai.md](docs/Ke_hoach_trien_khai.md)
 
+Tổng quan bộ dữ liệu, mô hình và dữ liệu chuẩn: [docs/10_tong_quan_du_lieu_mo_hinh.md](docs/10_tong_quan_du_lieu_mo_hinh.md)
+
 ### Chặng 1 — Chốt yêu cầu và khởi tạo dự án
 
 - [x] C01-T01: Lập bảng yêu cầu bắt buộc và tùy chọn từ đề bài — [docs/01_yeu_cau.md](docs/01_yeu_cau.md)
