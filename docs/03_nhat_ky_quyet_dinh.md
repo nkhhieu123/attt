@@ -97,3 +97,10 @@ Mẫu:
 - Bối cảnh: CIC-IDS2017 không có DoS kiểu SYN/ICMP và thuộc mạng khác; CTU-13 chỉ có một scenario ngang hàng; không dataset nào có đối chứng lành tính.
 - Quyết định: Thu 11 biến thể của năm kịch bản (xem `docs/09_du_lieu_lab.md`). DoS dùng SYN; ICMP và DDoS nhiều nguồn là tùy chọn. Mỗi biến thể tối thiểu 1 lần chạy `train`, 1 lần `val`, 3 lần `test`; vai trò ghi trước khi chạy. Mã lần chạy dạng `<mã biến thể>-<vai trò>-<số thứ tự>`.
 - Hệ quả: Tối thiểu 55 lần chạy, khoảng 8 giờ thu. Tham số tốc độ quét, ba mức tải DoS và chu kỳ beaconing chưa chốt, phải ghi vào cấu hình trước lần chạy đầu tiên. Các lần chạy `test` thu sau khi mô hình và ngưỡng đã khóa.
+
+## QĐ-013 — Tự viết bộ đọc file PCAP/PCAPNG bằng thư viện chuẩn
+- Ngày: 17/10/2026
+- Trạng thái: Tạm thời
+- Bối cảnh: Kế hoạch gợi ý chọn giữa Scapy, PyShark và dpkt để đọc packet. File PCAP của CIC-IDS2017 cỡ 10 GB mỗi ngày; Scapy dựng đối tượng cho mọi tầng của từng gói nên chậm với file cỡ này; PyShark cần cài TShark trên mọi máy.
+- Quyết định: Bộ đọc file (`src/nids/pcap_reader.py`) tự viết bằng `struct`, đọc theo luồng, trả về bản ghi thô kèm `orig_len` và timestamp nano giây; hỗ trợ cả PCAPNG (xem `docs/11_bo_doc_pcap.md`). Scapy vẫn là thư viện bắt gói trực tiếp ở chặng 10.
+- Hệ quả: Chương trình offline và realtime phải đưa packet vào cùng một bước phân tích header (C03-T02, C03-T03) để giữ đúng yêu cầu B12. Có thể đổi sang dpkt cho bước phân tích header nếu tự viết tốn quá nhiều công; quyết định khi làm C03-T02.

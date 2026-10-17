@@ -37,6 +37,10 @@ Tổng quan bộ dữ liệu, mô hình và dữ liệu chuẩn: [docs/10_tong_q
 
 Báo cáo tiến độ Chặng 1 và 2: [docs/Bao_cao_tien_do_Chang_1_2.md](docs/Bao_cao_tien_do_Chang_1_2.md)
 
+### Chặng 3 — Chuyển PCAP và log thành dữ liệu có cấu trúc
+
+- [x] C03-T01: Viết bộ đọc PCAP theo từng packet — `src/nids/pcap_reader.py`, [docs/11_bo_doc_pcap.md](docs/11_bo_doc_pcap.md)
+
 ## Cấu trúc
 
 ```
@@ -47,6 +51,7 @@ src/nids/
   scope.py            Tên module và tập nhãn
   config.py           Đọc cấu hình
   manifest.py         Đọc và kiểm tra manifest dữ liệu
+  pcap_reader.py      Đọc file PCAP/PCAPNG theo từng packet
   alerts.py           Schema cảnh báo, xuất terminal + CSV
 tests/                Kiểm thử
 scripts/              Script đọc PCAP, sinh traffic mô phỏng (chưa có)
@@ -88,6 +93,9 @@ python -m unittest discover -s tests
 
 # Xuất cảnh báo mẫu để kiểm tra định dạng (không phải kết quả thực nghiệm)
 python -m nids.alerts
+
+# Xem nhanh một file PCAP/PCAPNG: 10 packet đầu và tóm tắt
+python -m nids.pcap_reader data/pcap/<file>.pcap -n 10
 ```
 
 ## Quy ước
