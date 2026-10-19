@@ -40,6 +40,7 @@ Báo cáo tiến độ Chặng 1 và 2: [docs/Bao_cao_tien_do_Chang_1_2.md](docs
 ### Chặng 3 — Chuyển PCAP và log thành dữ liệu có cấu trúc
 
 - [x] C03-T01: Viết bộ đọc PCAP theo từng packet — `src/nids/pcap_reader.py`, [docs/11_bo_doc_pcap.md](docs/11_bo_doc_pcap.md)
+- [x] C03-T02: Trích xuất timestamp, IP, giao thức, độ dài — `src/nids/packets.py`, [docs/12_trich_xuat_packet.md](docs/12_trich_xuat_packet.md)
 
 ## Cấu trúc
 
@@ -52,6 +53,7 @@ src/nids/
   config.py           Đọc cấu hình
   manifest.py         Đọc và kiểm tra manifest dữ liệu
   pcap_reader.py      Đọc file PCAP/PCAPNG theo từng packet
+  packets.py          Trích xuất timestamp, IP, giao thức, độ dài
   alerts.py           Schema cảnh báo, xuất terminal + CSV
 tests/                Kiểm thử
 scripts/              Script đọc PCAP, sinh traffic mô phỏng (chưa có)
@@ -96,6 +98,9 @@ python -m nids.alerts
 
 # Xem nhanh một file PCAP/PCAPNG: 10 packet đầu và tóm tắt
 python -m nids.pcap_reader data/pcap/<file>.pcap -n 10
+
+# Trích xuất bảng gói IP ra CSV
+python -m nids.packets data/pcap/<file>.pcap --csv output/packets.csv
 ```
 
 ## Quy ước

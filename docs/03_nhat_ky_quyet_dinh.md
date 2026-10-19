@@ -104,3 +104,10 @@ Mẫu:
 - Bối cảnh: Kế hoạch gợi ý chọn giữa Scapy, PyShark và dpkt để đọc packet. File PCAP của CIC-IDS2017 cỡ 10 GB mỗi ngày; Scapy dựng đối tượng cho mọi tầng của từng gói nên chậm với file cỡ này; PyShark cần cài TShark trên mọi máy.
 - Quyết định: Bộ đọc file (`src/nids/pcap_reader.py`) tự viết bằng `struct`, đọc theo luồng, trả về bản ghi thô kèm `orig_len` và timestamp nano giây; hỗ trợ cả PCAPNG (xem `docs/11_bo_doc_pcap.md`). Scapy vẫn là thư viện bắt gói trực tiếp ở chặng 10.
 - Hệ quả: Chương trình offline và realtime phải đưa packet vào cùng một bước phân tích header (C03-T02, C03-T03) để giữ đúng yêu cầu B12. Có thể đổi sang dpkt cho bước phân tích header nếu tự viết tốn quá nhiều công; quyết định khi làm C03-T02.
+
+## QĐ-014 — Tự viết phần đọc header Ethernet/IP
+- Ngày: 19/10/2026
+- Trạng thái: Đã chốt
+- Bối cảnh: QĐ-013 để ngỏ việc dùng dpkt cho bước đọc header khi làm C03-T02.
+- Quyết định: Tự viết bằng `struct` trong `src/nids/packets.py`: Ethernet (có VLAN), Linux cooked, loopback, IP thô; IPv4 và IPv6 có header mở rộng (xem `docs/12_trich_xuat_packet.md`). Không thêm dpkt.
+- Hệ quả: Kết quả đã khớp `tshark` trên mọi gói của hai bản thu CTU-13. Chương trình realtime phải đưa byte thô của gói bắt được qua cùng hàm `parse_packet()`.
