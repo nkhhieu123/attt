@@ -24,6 +24,8 @@ bị cắt hay sai, cho kết quả `None`.
 | `is_fragment` | Gói thuộc một datagram IP bị phân mảnh |
 | `l4_offset` | Vị trí header tầng trên trong byte của gói; `None` với mảnh không phải mảnh đầu. Dùng cho task C03-T03 |
 
+Cổng và cờ TCP (C03-T03) mô tả ở [13_port_co_tcp.md](13_port_co_tcp.md).
+
 **Chọn độ dài nào.** `frame_len` gồm header Ethernet và phần đệm của khung
 ngắn (khung Ethernet tối thiểu 60 byte), nên phụ thuộc kiểu tầng liên kết lúc
 bắt. `ip_len` không phụ thuộc vào cách bắt và không bị ảnh hưởng khi gói bị cắt

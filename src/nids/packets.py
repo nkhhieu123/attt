@@ -1,9 +1,9 @@
-"""Trích xuất timestamp, IP, giao thức và độ dài từ từng packet (C03-T02).
+"""Trích xuất timestamp, IP, giao thức, độ dài, cổng và cờ TCP từ từng packet.
 
 Nhận RawPacket của pcap_reader, bóc header tầng liên kết rồi đọc header IPv4
-hoặc IPv6. Packet không phải IP, hoặc header IP bị cắt/không hợp lệ, cho kết
-quả None; việc phân loại và đếm các packet này là task C03-T04. Cổng và cờ TCP
-là task C03-T03.
+hoặc IPv6 (C03-T02), sau đó đọc cổng của TCP/UDP/SCTP và cờ TCP khi các trường
+này có trong gói (C03-T03). Packet không phải IP, hoặc header IP bị cắt/không
+hợp lệ, cho kết quả None; việc phân loại và đếm các packet này là task C03-T04.
 
     for rec in extract_packets("data/pcap/k1-binh-thuong-train-01.pcap"):
         print(rec.ts_ns, rec.src_ip, rec.dst_ip, rec.protocol_name, rec.frame_len)
@@ -40,6 +40,7 @@ PROTO_ICMP = 1
 PROTO_TCP = 6
 PROTO_UDP = 17
 PROTO_ICMPV6 = 58
+PROTO_SCTP = 132
 PROTOCOL_NAMES = {
     1: "ICMP", 2: "IGMP", 6: "TCP", 17: "UDP", 47: "GRE", 50: "ESP",
     51: "AH", 58: "ICMPv6", 89: "OSPF", 132: "SCTP",
@@ -52,6 +53,27 @@ IPV6_EXT_FRAGMENT = 44
 IPV6_EXT_AH = 51
 IPV6_EXT_DEST_OPTS = 60
 IPV6_NO_NEXT = 59
+
+# Giao thức có cổng nguồn/đích ở 4 byte đầu header
+PORT_PROTOCOLS = (PROTO_TCP, PROTO_UDP, PROTO_SCTP)
+
+# Cờ TCP: 8 bit ở byte 13 và bit thấp nhất của byte 12 (AE, trước đây là NS).
+# Ba bit dự trữ còn lại không phải cờ nên bị bỏ qua.
+TCP_FIN = 0x001
+TCP_SYN = 0x002
+TCP_RST = 0x004
+TCP_PSH = 0x008
+TCP_ACK = 0x010
+TCP_URG = 0x020
+TCP_ECE = 0x040
+TCP_CWR = 0x080
+TCP_AE = 0x100
+TCP_FLAG_MASK = 0x1FF
+TCP_FLAG_NAMES = (
+    (TCP_SYN, "SYN"), (TCP_ACK, "ACK"), (TCP_FIN, "FIN"), (TCP_RST, "RST"),
+    (TCP_PSH, "PSH"), (TCP_URG, "URG"), (TCP_ECE, "ECE"), (TCP_CWR, "CWR"),
+    (TCP_AE, "AE"),
+)
 
 
 @dataclass(frozen=True)
@@ -67,10 +89,18 @@ class PacketRecord:
     caplen: int           # số byte đã lưu trong file
     l4_offset: int | None  # vị trí header tầng trên trong data; None với mảnh IP không phải mảnh đầu
     is_fragment: bool     # gói thuộc một datagram IP bị phân mảnh
+    src_port: int | None = None   # cổng TCP/UDP/SCTP; None nếu không có hoặc bị cắt
+    dst_port: int | None = None
+    tcp_flags: int | None = None  # 9 bit cờ TCP (TCP_*); None nếu không phải TCP hoặc bị cắt
 
     @property
     def protocol_name(self) -> str:
         return PROTOCOL_NAMES.get(self.protocol, str(self.protocol))
+
+    @property
+    def tcp_flag_names(self) -> str:
+        """Tên các cờ đang bật, ví dụ "SYN,ACK"; chuỗi rỗng nếu không có cờ TCP."""
+        return tcp_flag_names(self.tcp_flags)
 
     @property
     def ts(self) -> float | None:
@@ -138,8 +168,32 @@ def parse_packet(pkt: RawPacket) -> PacketRecord | None:
     if fields_ is None:
         return None
     src, dst, proto, ip_len, l4_offset, is_fragment = fields_
+    src_port = dst_port = tcp_flags = None
+    if l4_offset is not None and proto in PORT_PROTOCOLS:
+        # Chỉ đọc trong phạm vi gói IP để không lấy nhầm byte đệm của khung Ethernet.
+        end = min(len(pkt.data), pos + ip_len)
+        src_port, dst_port, tcp_flags = _parse_l4(pkt.data, l4_offset, end, proto)
     return PacketRecord(pkt.index, pkt.ts_ns, src, dst, version, proto,
-                        pkt.origlen, ip_len, pkt.caplen, l4_offset, is_fragment)
+                        pkt.origlen, ip_len, pkt.caplen, l4_offset, is_fragment,
+                        src_port, dst_port, tcp_flags)
+
+
+def _parse_l4(data, pos, end, proto):
+    """Đọc cổng và cờ TCP; trường nào nằm ngoài phần đã bắt thì là None."""
+    if end < pos + 4:
+        return None, None, None
+    src_port, dst_port = struct.unpack_from("!HH", data, pos)
+    tcp_flags = None
+    if proto == PROTO_TCP and end >= pos + 14:
+        tcp_flags = struct.unpack_from("!H", data, pos + 12)[0] & TCP_FLAG_MASK
+    return src_port, dst_port, tcp_flags
+
+
+def tcp_flag_names(flags: int | None) -> str:
+    """Đổi giá trị cờ TCP thành chuỗi tên, ví dụ 0x012 -> "SYN,ACK"."""
+    if not flags:
+        return ""
+    return ",".join(name for bit, name in TCP_FLAG_NAMES if flags & bit)
 
 
 def _parse_ipv4(data, pos):
@@ -204,7 +258,8 @@ def extract_packets(path):
 
 
 CSV_COLUMNS = ("index", "ts", "src_ip", "dst_ip", "ip_version", "protocol",
-               "protocol_name", "frame_len", "ip_len", "caplen", "is_fragment")
+               "protocol_name", "frame_len", "ip_len", "caplen", "is_fragment",
+               "src_port", "dst_port", "tcp_flags", "tcp_flag_names")
 
 
 def _csv_row(rec):
@@ -212,12 +267,13 @@ def _csv_row(rec):
     row["ts"] = "" if rec.ts_ns is None else f"{rec.ts_ns // 10**9}.{rec.ts_ns % 10**9:09d}"
     row["protocol_name"] = rec.protocol_name
     row["is_fragment"] = int(rec.is_fragment)
-    return {col: row[col] for col in CSV_COLUMNS}
+    row["tcp_flag_names"] = rec.tcp_flag_names
+    return {col: "" if row[col] is None else row[col] for col in CSV_COLUMNS}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Trích xuất timestamp, IP, giao thức, độ dài từ file PCAP/PCAPNG."
+        description="Trích xuất timestamp, IP, giao thức, độ dài, cổng, cờ TCP từ file PCAP/PCAPNG."
     )
     parser.add_argument("file", help="đường dẫn file .pcap hoặc .pcapng")
     parser.add_argument("--csv", help="ghi bảng packet ra file CSV")
@@ -243,8 +299,11 @@ def main(argv=None):
                     continue
                 if ip_count < args.count:
                     row = _csv_row(rec)
-                    print(f"{rec.index:>6}  {row['ts']}  {rec.src_ip} -> {rec.dst_ip}"
-                          f"  {rec.protocol_name}  frame={rec.frame_len} ip={rec.ip_len}")
+                    src = _endpoint(rec.src_ip, rec.src_port)
+                    dst = _endpoint(rec.dst_ip, rec.dst_port)
+                    flags = f" [{rec.tcp_flag_names}]" if rec.tcp_flags is not None else ""
+                    print(f"{rec.index:>6}  {row['ts']}  {src} -> {dst}"
+                          f"  {rec.protocol_name}{flags}  frame={rec.frame_len} ip={rec.ip_len}")
                 ip_count += 1
                 by_proto[rec.protocol_name] = by_proto.get(rec.protocol_name, 0) + 1
                 if writer:
@@ -258,6 +317,12 @@ def main(argv=None):
         f"{name}={n}" for name, n in sorted(by_proto.items(), key=lambda x: -x[1])))
     if args.csv:
         print(f"Đã ghi CSV: {args.csv}")
+
+
+def _endpoint(ip, port):
+    if port is None:
+        return ip
+    return f"[{ip}]:{port}" if ":" in ip else f"{ip}:{port}"
 
 
 if __name__ == "__main__":

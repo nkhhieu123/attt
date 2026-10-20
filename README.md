@@ -41,6 +41,7 @@ Báo cáo tiến độ Chặng 1 và 2: [docs/Bao_cao_tien_do_Chang_1_2.md](docs
 
 - [x] C03-T01: Viết bộ đọc PCAP theo từng packet — `src/nids/pcap_reader.py`, [docs/11_bo_doc_pcap.md](docs/11_bo_doc_pcap.md)
 - [x] C03-T02: Trích xuất timestamp, IP, giao thức, độ dài — `src/nids/packets.py`, [docs/12_trich_xuat_packet.md](docs/12_trich_xuat_packet.md)
+- [x] C03-T03: Trích xuất port và cờ TCP khi tồn tại — `src/nids/packets.py`, [docs/13_port_co_tcp.md](docs/13_port_co_tcp.md)
 
 ## Cấu trúc
 
@@ -53,7 +54,7 @@ src/nids/
   config.py           Đọc cấu hình
   manifest.py         Đọc và kiểm tra manifest dữ liệu
   pcap_reader.py      Đọc file PCAP/PCAPNG theo từng packet
-  packets.py          Trích xuất timestamp, IP, giao thức, độ dài
+  packets.py          Trích xuất timestamp, IP, giao thức, độ dài, port, cờ TCP
   alerts.py           Schema cảnh báo, xuất terminal + CSV
 tests/                Kiểm thử
 scripts/              Script đọc PCAP, sinh traffic mô phỏng (chưa có)

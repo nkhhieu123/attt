@@ -11,7 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from nids.packets import (
     CSV_COLUMNS, LINKTYPE_ETHERNET, LINKTYPE_LINUX_SLL, LINKTYPE_LINUX_SLL2,
-    LINKTYPE_NULL, LINKTYPE_RAW, extract_packets, main, parse_packet,
+    LINKTYPE_NULL, LINKTYPE_RAW, TCP_ACK, TCP_AE, TCP_SYN, extract_packets, main,
+    parse_packet, tcp_flag_names,
 )
 from nids.pcap_reader import RawPacket
 
@@ -33,6 +34,15 @@ def ipv4(proto=6, payload=b"\0" * 20, flags_frag=0, ihl=5, src=IP_A, dst=IP_B):
 def ipv6(next_header=17, payload=b"\0" * 8):
     return struct.pack("!IHBB16s16s", 0x60000000, len(payload), next_header, 64,
                        IP6_A, IP6_B) + payload
+
+
+def tcp(sport=40000, dport=80, flags=TCP_SYN, data=b""):
+    off_flags = (5 << 12) | flags
+    return struct.pack("!HHIIHHHH", sport, dport, 1, 0, off_flags, 64240, 0, 0) + data
+
+
+def udp(sport=5353, dport=53, data=b""):
+    return struct.pack("!HHHH", sport, dport, 8 + len(data), 0) + data
 
 
 def ether(payload, ethertype=0x0800, vlans=()):
@@ -117,6 +127,52 @@ class Ipv6Test(unittest.TestCase):
         self.assertEqual((b.protocol_name, b.is_fragment, b.l4_offset), ("TCP", True, None))
 
 
+class PortFlagTest(unittest.TestCase):
+    def test_tcp_ports_and_flags(self):
+        rec = parse_packet(raw(ether(ipv4(payload=tcp(51234, 443, TCP_SYN | TCP_ACK)))))
+        self.assertEqual((rec.src_port, rec.dst_port), (51234, 443))
+        self.assertEqual(rec.tcp_flags, 0x012)
+        self.assertEqual(rec.tcp_flag_names, "SYN,ACK")
+
+    def test_ae_bit_kept_reserved_bits_dropped(self):
+        segment = bytearray(tcp(flags=TCP_ACK))
+        segment[12] |= 0x0F                       # 3 bit dự trữ + AE
+        rec = parse_packet(raw(ether(ipv4(payload=bytes(segment)))))
+        self.assertEqual(rec.tcp_flags, TCP_AE | TCP_ACK)
+        self.assertEqual(tcp_flag_names(0), "")
+
+    def test_udp_ports_no_flags(self):
+        rec = parse_packet(raw(ether(ipv4(proto=17, payload=udp()))))
+        self.assertEqual((rec.src_port, rec.dst_port, rec.tcp_flags), (5353, 53, None))
+        self.assertEqual(rec.tcp_flag_names, "")
+
+    def test_icmp_has_no_ports(self):
+        rec = parse_packet(raw(ether(ipv4(proto=1, payload=bytes(8)))))
+        self.assertEqual((rec.src_port, rec.dst_port, rec.tcp_flags), (None, None, None))
+
+    def test_ipv6_tcp_after_extension_header(self):
+        hop_by_hop = bytes([6, 0]) + bytes(6)
+        rec = parse_packet(raw(ether(ipv6(0, hop_by_hop + tcp(1234, 22)), ethertype=0x86DD)))
+        self.assertEqual((rec.src_port, rec.dst_port, rec.tcp_flag_names), (1234, 22, "SYN"))
+
+    def test_snaplen_cut(self):
+        frame = ether(ipv4(payload=tcp()))
+        ports_only = parse_packet(raw(frame[:34 + 8], origlen=len(frame)))
+        self.assertEqual((ports_only.src_port, ports_only.tcp_flags), (40000, None))
+        nothing = parse_packet(raw(frame[:34 + 2], origlen=len(frame)))
+        self.assertEqual((nothing.src_port, nothing.dst_port), (None, None))
+
+    def test_ethernet_padding_is_not_read_as_ports(self):
+        frame = ether(ipv4(payload=b"")) + bytes([0x12, 0x34, 0x56, 0x78]) + bytes(22)
+        rec = parse_packet(raw(frame))
+        self.assertEqual(rec.ip_len, 20)
+        self.assertIsNone(rec.src_port)
+
+    def test_later_fragment_has_no_ports(self):
+        rec = parse_packet(raw(ether(ipv4(flags_frag=185, payload=tcp()))))
+        self.assertEqual((rec.src_port, rec.tcp_flags), (None, None))
+
+
 class LinkTypeTest(unittest.TestCase):
     def test_linux_cooked(self):
         sll = struct.pack("!HHH8sH", 0, 1, 6, MAC_A + b"\0\0", 0x0800)
@@ -145,7 +201,8 @@ class FileTest(unittest.TestCase):
         self.dir = Path(tmp.name)
         arp = ether(bytes(28), ethertype=0x0806)
         self.pcap = pcap_file(self.dir / "t.pcap",
-                              [ether(ipv4()), arp, ether(ipv6(), ethertype=0x86DD)])
+                              [ether(ipv4(payload=tcp())), arp,
+                               ether(ipv6(payload=udp()), ethertype=0x86DD)])
 
     def test_extract_skips_non_ip(self):
         recs = list(extract_packets(self.pcap))
@@ -162,6 +219,9 @@ class FileTest(unittest.TestCase):
         self.assertEqual(tuple(rows[0]), CSV_COLUMNS)
         self.assertEqual(rows[0]["ts"], "100.000005000")
         self.assertEqual(rows[1]["dst_ip"], "ff02::1")
+        self.assertEqual((rows[0]["dst_port"], rows[0]["tcp_flags"], rows[0]["tcp_flag_names"]),
+                         ("80", "2", "SYN"))
+        self.assertEqual((rows[1]["dst_port"], rows[1]["tcp_flags"]), ("53", ""))
 
 
 if __name__ == "__main__":
