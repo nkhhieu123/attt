@@ -102,8 +102,11 @@ Ngoài ra:
 
 - Log không có yêu cầu bị rớt trước khi Nginx nhận được, nên không dùng log để
   đếm số gói hay số kết nối bị mất.
-- Yêu cầu không hoàn chỉnh hoặc bị ngắt được ghi với dòng yêu cầu rỗng và mã
-  400, 408 hoặc 499 (499 là mã riêng của Nginx: client đóng kết nối trước).
+- Yêu cầu không hoàn chỉnh hoặc bị ngắt được ghi với mã 400, 408 hoặc 499
+  (499 là mã riêng của Nginx: client đóng kết nối trước). Dòng yêu cầu khi đó
+  là phần Nginx đã nhận được, có thể là byte nhị phân. Kết nối mở rồi đóng mà
+  không gửi byte nào thì không có dòng log (đã thử trên Nginx 1.26.3, xem
+  [15_parser_log.md](15_parser_log.md)).
 
 ## 6. Lưu trữ
 
@@ -116,4 +119,5 @@ Ngoài ra:
 
 - Cài Nginx và áp dụng `log_format nids` trên máy chủ dịch vụ; kiểm tra bằng
   một yêu cầu thử.
-- Viết hàm đọc log thành bảng với 12 cột ở mục 3.
+- ~~Viết hàm đọc log thành bảng với 12 cột ở mục 3.~~ Đã làm ở C03-T05:
+  `src/nids/service_log.py`, [15_parser_log.md](15_parser_log.md).

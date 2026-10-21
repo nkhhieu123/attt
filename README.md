@@ -43,6 +43,7 @@ Báo cáo tiến độ Chặng 1 và 2: [docs/Bao_cao_tien_do_Chang_1_2.md](docs
 - [x] C03-T02: Trích xuất timestamp, IP, giao thức, độ dài — `src/nids/packets.py`, [docs/12_trich_xuat_packet.md](docs/12_trich_xuat_packet.md)
 - [x] C03-T03: Trích xuất port và cờ TCP khi tồn tại — `src/nids/packets.py`, [docs/13_port_co_tcp.md](docs/13_port_co_tcp.md)
 - [x] C03-T04: Xử lý packet không hỗ trợ, lỗi và thống kê bỏ qua — `src/nids/packets.py`, [docs/14_goi_bo_qua.md](docs/14_goi_bo_qua.md)
+- [x] C03-T05: Viết parser cho log dịch vụ đã chọn (access log Nginx) — `src/nids/service_log.py`, [docs/15_parser_log.md](docs/15_parser_log.md)
 
 ## Cấu trúc
 
@@ -57,6 +58,7 @@ src/nids/
   pcap_reader.py      Đọc file PCAP/PCAPNG theo từng packet
   packets.py          Trích xuất timestamp, IP, giao thức, độ dài, port, cờ TCP;
                       thống kê gói bỏ qua
+  service_log.py      Đọc access log Nginx định dạng nids
   alerts.py           Schema cảnh báo, xuất terminal + CSV
 tests/                Kiểm thử
 scripts/              Script đọc PCAP, sinh traffic mô phỏng (chưa có)
@@ -104,6 +106,9 @@ python -m nids.pcap_reader data/pcap/<file>.pcap -n 10
 
 # Trích xuất bảng gói IP ra CSV, kèm thống kê gói bỏ qua
 python -m nids.packets data/pcap/<file>.pcap --csv output/packets.csv --stats output/packets_stats.json
+
+# Đọc access log Nginx của một lần chạy
+python -m nids.service_log data/service_logs/<run_id>/access_nids.log -n 10
 ```
 
 ## Quy ước
