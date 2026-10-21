@@ -45,7 +45,8 @@ CIC-IDS2017, CTU-13 và lab so sánh được với nhau; chốt khi làm C04-T0
 | Đường hầm (IP trong IP, GRE, VXLAN) | Chỉ đọc header IP ngoài cùng |
 | ARP, 802.11 và các kiểu khác | Trả về `None` |
 
-Phân loại và đếm các gói trả về `None` theo lý do là task C03-T04.
+Phân loại và đếm các gói trả về `None` theo lý do (C03-T04) mô tả ở
+[14_goi_bo_qua.md](14_goi_bo_qua.md).
 
 ## 3. Cách dùng
 

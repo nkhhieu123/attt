@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import struct
 import sys
 import unittest
@@ -11,10 +12,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from nids.packets import (
     CSV_COLUMNS, LINKTYPE_ETHERNET, LINKTYPE_LINUX_SLL, LINKTYPE_LINUX_SLL2,
-    LINKTYPE_NULL, LINKTYPE_RAW, TCP_ACK, TCP_AE, TCP_SYN, extract_packets, main,
-    parse_packet, tcp_flag_names,
+    LINKTYPE_NULL, LINKTYPE_RAW, NOTE_FRAGMENT, NOTE_IP_LEN_OVER, NOTE_IP_LEN_ZERO,
+    NOTE_L4_TRUNCATED, NOTE_NO_TS, NOTE_SNAPLEN, SKIP_IP_INVALID, SKIP_IP_TRUNCATED,
+    SKIP_LINK_TRUNCATED, SKIP_LINKTYPE, SKIP_NON_IP, TCP_ACK, TCP_AE, TCP_SYN, ParseStats,
+    extract_packets, inspect_packet, main, parse_packet, tcp_flag_names,
 )
-from nids.pcap_reader import RawPacket
+from nids.pcap_reader import PcapFormatError, RawPacket
 
 MAC_A = bytes.fromhex("080027aabb01")
 MAC_B = bytes.fromhex("080027aabb02")
@@ -50,8 +53,8 @@ def ether(payload, ethertype=0x0800, vlans=()):
     return MAC_B + MAC_A + tags + struct.pack("!H", ethertype) + payload
 
 
-def raw(data, linktype=LINKTYPE_ETHERNET, origlen=None, index=0):
-    return RawPacket(index, 1_000_000_000, len(data),
+def raw(data, linktype=LINKTYPE_ETHERNET, origlen=None, index=0, ts_ns=1_000_000_000):
+    return RawPacket(index, ts_ns, len(data),
                      len(data) if origlen is None else origlen, linktype, data)
 
 
@@ -173,6 +176,81 @@ class PortFlagTest(unittest.TestCase):
         self.assertEqual((rec.src_port, rec.tcp_flags), (None, None))
 
 
+class SkipReasonTest(unittest.TestCase):
+    def skip(self, pkt):
+        result = inspect_packet(pkt)
+        self.assertIsNone(result.record)
+        return result.reason, result.detail
+
+    def test_non_ip(self):
+        self.assertEqual(self.skip(raw(ether(bytes(28), ethertype=0x0806))),
+                         (SKIP_NON_IP, "ARP (0x0806)"))
+        self.assertEqual(self.skip(raw(ether(bytes(28), ethertype=0x1234))),
+                         (SKIP_NON_IP, "0x1234"))
+        self.assertEqual(self.skip(raw(ether(bytes(40), ethertype=46))),   # khung 802.3
+                         (SKIP_NON_IP, "802.3/LLC"))
+        self.assertEqual(self.skip(raw(struct.pack("<I", 7) + ipv4(), LINKTYPE_NULL)),
+                         (SKIP_NON_IP, "họ địa chỉ 7"))
+
+    def test_unsupported_linktype(self):
+        self.assertEqual(self.skip(raw(ether(ipv4()), linktype=105)),
+                         (SKIP_LINKTYPE, "LINKTYPE 105"))
+
+    def test_truncated_link_header(self):
+        self.assertEqual(self.skip(raw(b"\x01\x02"))[0], SKIP_LINK_TRUNCATED)
+        vlan_cut = ether(ipv4(), vlans=[(0x8100, 1)])[:16]
+        self.assertEqual(self.skip(raw(vlan_cut)), (SKIP_LINK_TRUNCATED, "VLAN"))
+
+    def test_truncated_ip_header(self):
+        self.assertEqual(self.skip(raw(ether(ipv4())[:30])), (SKIP_IP_TRUNCATED, "IPv4"))
+        self.assertEqual(self.skip(raw(ether(ipv6(), ethertype=0x86DD)[:50])),
+                         (SKIP_IP_TRUNCATED, "IPv6"))
+
+    def test_invalid_ip_header(self):
+        frame = bytearray(ether(ipv4()))
+        frame[14] = 0x43                                   # IHL = 3
+        self.assertEqual(self.skip(raw(bytes(frame)))[0], SKIP_IP_INVALID)
+        frame[14] = 0x65                                   # phiên bản 6 trong EtherType IPv4
+        self.assertEqual(self.skip(raw(bytes(frame))), (SKIP_IP_INVALID, "IPv4: phiên bản 6"))
+        frame = bytearray(ether(ipv4()))
+        frame[16:18] = struct.pack("!H", 10)                # Total Length < 20
+        self.assertEqual(self.skip(raw(bytes(frame)))[0], SKIP_IP_INVALID)
+        self.assertEqual(self.skip(raw(bytes([0x50]) + bytes(30), LINKTYPE_RAW))[0],
+                         SKIP_IP_INVALID)
+
+
+class NoteTest(unittest.TestCase):
+    def notes(self, pkt):
+        result = inspect_packet(pkt)
+        self.assertIsNotNone(result.record)
+        return set(result.notes)
+
+    def test_clean_packet_has_no_notes(self):
+        self.assertEqual(self.notes(raw(ether(ipv4(payload=tcp())))), set())
+
+    def test_snaplen_and_missing_l4(self):
+        frame = ether(ipv4(payload=tcp()))
+        self.assertEqual(self.notes(raw(frame[:40], origlen=len(frame))),
+                         {NOTE_SNAPLEN, NOTE_L4_TRUNCATED})
+
+    def test_fragment_and_no_timestamp(self):
+        pkt = raw(ether(ipv4(flags_frag=185)), ts_ns=None)
+        self.assertEqual(self.notes(pkt), {NOTE_FRAGMENT, NOTE_NO_TS})
+
+    def test_total_length_zero_uses_captured_bytes(self):
+        frame = bytearray(ether(ipv4(payload=tcp())))
+        frame[16:18] = b"\0\0"
+        result = inspect_packet(raw(bytes(frame)))
+        self.assertEqual(result.record.ip_len, 40)
+        self.assertEqual(result.record.dst_port, 80)
+        self.assertEqual(set(result.notes), {NOTE_IP_LEN_ZERO})
+
+    def test_ip_length_larger_than_frame(self):
+        frame = bytearray(ether(ipv4(payload=tcp())))
+        frame[16:18] = struct.pack("!H", 1500)
+        self.assertEqual(self.notes(raw(bytes(frame))), {NOTE_IP_LEN_OVER})
+
+
 class LinkTypeTest(unittest.TestCase):
     def test_linux_cooked(self):
         sll = struct.pack("!HHH8sH", 0, 1, 6, MAC_A + b"\0\0", 0x0800)
@@ -186,11 +264,11 @@ class LinkTypeTest(unittest.TestCase):
         self.assertEqual(parse_packet(raw(ipv6(), LINKTYPE_RAW)).ip_version, 6)
 
 
-def pcap_file(path, frames):
+def pcap_file(path, frames, tail=b""):
     out = struct.pack("<IHHiIII", 0xA1B2C3D4, 2, 4, 0, 0, 262144, 1)
     for i, frame in enumerate(frames):
         out += struct.pack("<IIII", 100 + i, 5, len(frame), len(frame)) + frame
-    path.write_bytes(out)
+    path.write_bytes(out + tail)
     return path
 
 
@@ -222,6 +300,46 @@ class FileTest(unittest.TestCase):
         self.assertEqual((rows[0]["dst_port"], rows[0]["tcp_flags"], rows[0]["tcp_flag_names"]),
                          ("80", "2", "SYN"))
         self.assertEqual((rows[1]["dst_port"], rows[1]["tcp_flags"]), ("53", ""))
+
+    def test_stats_count_skipped(self):
+        stats = ParseStats()
+        recs = list(extract_packets(self.pcap, stats))
+        self.assertEqual(len(recs), 2)
+        self.assertEqual((stats.total, stats.kept, stats.skipped_total), (3, 2, 1))
+        self.assertEqual(dict(stats.skipped), {SKIP_NON_IP: 1})
+        self.assertEqual(stats.first_skipped, {SKIP_NON_IP: 1})
+        d = stats.as_dict()
+        self.assertEqual(d["chi_tiet_bo_qua"], {SKIP_NON_IP: {"ARP (0x0806)": 1}})
+        self.assertIsNone(d["loi_file"])
+
+    def test_cut_file_keeps_earlier_packets(self):
+        cut = pcap_file(self.dir / "cut.pcap", [ether(ipv4())], tail=b"\x01\x02\x03")
+        stats = ParseStats()
+        self.assertEqual(len(list(extract_packets(cut, stats))), 1)
+        self.assertTrue(stats.truncated_file)
+        self.assertIn("CẢNH BÁO: file kết thúc giữa chừng", "\n".join(stats.summary_lines()))
+
+    def test_corrupt_record_stops_with_error(self):
+        bad_header = struct.pack("<IIII", 0, 0, 10**7, 10**7)   # incl_len quá lớn
+        bad = pcap_file(self.dir / "bad.pcap", [ether(ipv4())], tail=bad_header)
+        with self.assertRaises(PcapFormatError):
+            list(extract_packets(bad))
+        stats = ParseStats()
+        self.assertEqual(len(list(extract_packets(bad, stats))), 1)
+        self.assertIn("incl_len", stats.file_error)
+        with redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(main([str(bad)]), 1)
+        self.assertIn("LỖI: dừng đọc vì file hỏng", out.getvalue())
+
+    def test_cli_writes_stats_json(self):
+        out_json = self.dir / "stats.json"
+        with redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(main([str(self.pcap), "--stats", str(out_json)]), 0)
+        self.assertIn("khong_phai_ip: 1 [ARP (0x0806)=1] (khung đầu tiên trong Wireshark: 2)",
+                      out.getvalue())
+        data = json.loads(out_json.read_text(encoding="utf-8"))
+        self.assertEqual((data["tong_packet"], data["bo_qua"]), (3, 1))
+        self.assertEqual(data["bo_qua_theo_ly_do"], {SKIP_NON_IP: 1})
 
 
 if __name__ == "__main__":

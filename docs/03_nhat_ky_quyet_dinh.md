@@ -111,3 +111,10 @@ Mẫu:
 - Bối cảnh: QĐ-013 để ngỏ việc dùng dpkt cho bước đọc header khi làm C03-T02.
 - Quyết định: Tự viết bằng `struct` trong `src/nids/packets.py`: Ethernet (có VLAN), Linux cooked, loopback, IP thô; IPv4 và IPv6 có header mở rộng (xem `docs/12_trich_xuat_packet.md`). Không thêm dpkt.
 - Hệ quả: Kết quả đã khớp `tshark` trên mọi gói của hai bản thu CTU-13. Chương trình realtime phải đưa byte thô của gói bắt được qua cùng hàm `parse_packet()`.
+
+## QĐ-015 — Gói không đọc được bị bỏ qua có thống kê; file hỏng giữ phần đã đọc
+- Ngày: 21/10/2026
+- Trạng thái: Đã chốt
+- Bối cảnh: Bản thu có gói không phải IP (ARP chiếm 1,4% bản thu donbot của CTU-13), gói bị cắt, và có thể có file bị dừng ghi giữa chừng. Bỏ đi lặng lẽ sẽ làm sai lệch đặc trưng mà không ai biết.
+- Quyết định: Mỗi gói bị bỏ có một trong năm lý do (`khong_phai_ip`, `linktype_khong_ho_tro`, `header_lien_ket_bi_cat`, `header_ip_bi_cat`, `header_ip_sai`); gói giữ lại có ghi chú bất thường; `ParseStats` đếm cả hai (xem `docs/14_goi_bo_qua.md`). File hỏng giữa chừng thì dừng đọc, giữ các gói trước đó và ghi lỗi. IPv4 có Total Length 0 (TSO) được giữ, độ dài lấy theo số byte đã bắt như Wireshark.
+- Hệ quả: Nhật ký mỗi lần chạy lab phải lưu kết quả `ParseStats.as_dict()`. Lần chạy có `loi_file` hoặc tỉ lệ bỏ qua bất thường phải xem lại trước khi đưa vào train/test.

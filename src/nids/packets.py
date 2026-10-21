@@ -2,22 +2,27 @@
 
 Nhận RawPacket của pcap_reader, bóc header tầng liên kết rồi đọc header IPv4
 hoặc IPv6 (C03-T02), sau đó đọc cổng của TCP/UDP/SCTP và cờ TCP khi các trường
-này có trong gói (C03-T03). Packet không phải IP, hoặc header IP bị cắt/không
-hợp lệ, cho kết quả None; việc phân loại và đếm các packet này là task C03-T04.
+này có trong gói (C03-T03). Packet không phải IP, hoặc header bị cắt/không hợp
+lệ, bị bỏ qua kèm lý do; ParseStats đếm số gói bỏ qua theo lý do và các điểm
+bất thường của gói vẫn được giữ (C03-T04).
 
-    for rec in extract_packets("data/pcap/k1-binh-thuong-train-01.pcap"):
-        print(rec.ts_ns, rec.src_ip, rec.dst_ip, rec.protocol_name, rec.frame_len)
+    stats = ParseStats()
+    for rec in extract_packets("data/pcap/k1-binh-thuong-train-01.pcap", stats):
+        print(rec.ts_ns, rec.src_ip, rec.dst_ip, rec.protocol_name, rec.ip_len)
+    print("\n".join(stats.summary_lines()))
 """
 
 import argparse
 import csv
 import socket
+import json
 import struct
 import sys
+from collections import Counter
 from dataclasses import asdict, dataclass
 from ipaddress import IPv6Address
 
-from .pcap_reader import PcapReader, RawPacket
+from .pcap_reader import PcapFormatError, PcapReader, RawPacket
 
 # Mã LINKTYPE được hỗ trợ (xem docs/04_dinh_dang_pcap.md, mục 2)
 LINKTYPE_NULL = 0
@@ -31,6 +36,13 @@ LINKTYPE_LINUX_SLL2 = 276
 ETHERTYPE_IPV4 = 0x0800
 ETHERTYPE_IPV6 = 0x86DD
 ETHERTYPE_VLAN = (0x8100, 0x88A8, 0x9100)  # 802.1Q, 802.1ad (QinQ)
+# Các EtherType không phải IP hay gặp, chỉ dùng để ghi tên trong thống kê bỏ qua
+ETHERTYPE_NAMES = {
+    0x0806: "ARP", 0x8035: "RARP", 0x88CC: "LLDP", 0x888E: "EAPOL",
+    0x8863: "PPPoE Discovery", 0x8864: "PPPoE Session", 0x8847: "MPLS",
+    0x8848: "MPLS", 0x88E5: "MACsec", 0x88F7: "PTP", 0x9000: "Loopback",
+    0x8899: "Realtek", 0x893A: "IEEE 1905",
+}
 
 # Giá trị họ địa chỉ trong header loopback BSD (LINKTYPE_NULL)
 NULL_AF_INET = 2
@@ -76,6 +88,26 @@ TCP_FLAG_NAMES = (
 )
 
 
+# Lý do bỏ qua một packet
+SKIP_LINKTYPE = "linktype_khong_ho_tro"       # kiểu tầng liên kết chưa hỗ trợ, ví dụ 802.11
+SKIP_NON_IP = "khong_phai_ip"                 # tầng liên kết đọc được nhưng không chở IP, ví dụ ARP
+SKIP_LINK_TRUNCATED = "header_lien_ket_bi_cat"
+SKIP_IP_TRUNCATED = "header_ip_bi_cat"
+SKIP_IP_INVALID = "header_ip_sai"             # sai phiên bản, IHL hoặc Total Length
+SKIP_REASONS = (SKIP_NON_IP, SKIP_LINKTYPE, SKIP_LINK_TRUNCATED, SKIP_IP_TRUNCATED,
+                SKIP_IP_INVALID)
+
+# Điểm bất thường của gói vẫn được giữ lại
+NOTE_SNAPLEN = "bi_cat_snaplen"               # caplen < orig_len
+NOTE_L4_TRUNCATED = "thieu_header_tang_tren"  # không đọc được cổng/cờ TCP vì gói bị cắt
+NOTE_FRAGMENT = "phan_manh_ip"
+NOTE_IP_LEN_ZERO = "ip_len_bang_0"            # IPv4 Total Length 0 (TSO), lấy theo byte đã bắt
+NOTE_IP_LEN_OVER = "ip_len_vuot_khung"        # header IP khai báo dài hơn khung, gói không bị cắt
+NOTE_NO_TS = "khong_co_timestamp"             # Simple Packet Block của PCAPNG
+NOTES = (NOTE_SNAPLEN, NOTE_L4_TRUNCATED, NOTE_FRAGMENT, NOTE_IP_LEN_ZERO,
+         NOTE_IP_LEN_OVER, NOTE_NO_TS)
+
+
 @dataclass(frozen=True)
 class PacketRecord:
     index: int            # thứ tự packet trong file
@@ -107,30 +139,132 @@ class PacketRecord:
         return None if self.ts_ns is None else self.ts_ns / 1e9
 
 
+@dataclass(frozen=True)
+class ParseResult:
+    record: PacketRecord | None   # None khi gói bị bỏ qua
+    reason: str | None = None     # lý do bỏ qua (SKIP_*)
+    detail: str = ""              # chi tiết lý do, ví dụ "ARP (0x0806)", "LINKTYPE 105"
+    notes: tuple[str, ...] = ()   # điểm bất thường của gói được giữ (NOTE_*)
+
+
+class ParseStats:
+    """Đếm số gói giữ lại, gói bỏ qua theo lý do, và lỗi ở mức file.
+
+    ``first_skipped`` ghi chỉ số packet đầu tiên của mỗi lý do; trong Wireshark
+    đó là khung số ``index + 1``.
+    """
+
+    def __init__(self):
+        self.total = 0
+        self.kept = 0
+        self.skipped = Counter()
+        self.skipped_detail = Counter()   # (lý do, chi tiết) -> số gói
+        self.first_skipped = {}
+        self.notes = Counter()
+        self.truncated_file = False
+        self.skipped_blocks = 0
+        self.file_error = None
+
+    @property
+    def skipped_total(self) -> int:
+        return self.total - self.kept
+
+    def add(self, pkt: RawPacket, result: ParseResult):
+        self.total += 1
+        if result.record is None:
+            self.skipped[result.reason] += 1
+            self.skipped_detail[(result.reason, result.detail)] += 1
+            self.first_skipped.setdefault(result.reason, pkt.index)
+            return
+        self.kept += 1
+        self.notes.update(result.notes)
+
+    def read_file_state(self, reader: PcapReader):
+        self.truncated_file = self.truncated_file or reader.truncated_file
+        self.skipped_blocks += reader.skipped_blocks
+
+    def as_dict(self) -> dict:
+        details = {}
+        for (reason, detail), n in self.skipped_detail.most_common():
+            details.setdefault(reason, {})[detail or "-"] = n
+        return {
+            "tong_packet": self.total,
+            "giu_lai": self.kept,
+            "bo_qua": self.skipped_total,
+            "bo_qua_theo_ly_do": dict(self.skipped.most_common()),
+            "chi_tiet_bo_qua": details,
+            "packet_dau_tien_bo_qua": self.first_skipped,
+            "ghi_chu_goi_giu_lai": dict(self.notes.most_common()),
+            "file_bi_cut": self.truncated_file,
+            "block_pcapng_bo_qua": self.skipped_blocks,
+            "loi_file": self.file_error,
+        }
+
+    def summary_lines(self) -> list[str]:
+        pct = 100 * self.skipped_total / self.total if self.total else 0
+        lines = [f"Tổng packet: {self.total}; gói IP: {self.kept}; bỏ qua: "
+                 f"{self.skipped_total} ({pct:.2f}%)"]
+        if self.skipped:
+            lines.append("Bỏ qua theo lý do:")
+            for reason, n in self.skipped.most_common():
+                parts = [f"{d or '-'}={c}" for (r, d), c in self.skipped_detail.most_common()
+                         if r == reason]
+                lines.append(f"  {reason}: {n} [{', '.join(parts[:5])}]"
+                             f" (khung đầu tiên trong Wireshark: {self.first_skipped[reason] + 1})")
+        if self.notes:
+            lines.append("Ghi chú trên gói giữ lại: " + ", ".join(
+                f"{note}={n}" for note, n in self.notes.most_common()))
+        if self.skipped_blocks:
+            lines.append(f"Block PCAPNG không chứa packet đã bỏ qua: {self.skipped_blocks}")
+        if self.truncated_file:
+            lines.append("CẢNH BÁO: file kết thúc giữa chừng một bản ghi; bản ghi cuối bị bỏ")
+        if self.file_error:
+            lines.append(f"LỖI: dừng đọc vì file hỏng: {self.file_error}")
+        if self.total and not self.kept:
+            lines.append("CẢNH BÁO: không có gói IP nào; kiểm tra kiểu tầng liên kết của file")
+        return lines
+
+
+class _Skip(Exception):
+    """Gói bị bỏ qua: lý do (SKIP_*) và chi tiết để thống kê."""
+
+    def __init__(self, reason, detail=""):
+        super().__init__(reason, detail)
+        self.reason = reason
+        self.detail = detail
+
+
 def network_offset(linktype: int, data: bytes) -> tuple[int, int] | None:
     """Tìm header tầng mạng: trả về (vị trí bắt đầu, phiên bản IP) hoặc None."""
+    try:
+        return _network_offset(linktype, data)
+    except _Skip:
+        return None
+
+
+def _network_offset(linktype, data):
     if linktype == LINKTYPE_ETHERNET:
         if len(data) < 14:
-            return None
+            raise _Skip(SKIP_LINK_TRUNCATED, "Ethernet")
         pos = 12
         ethertype = struct.unpack_from("!H", data, pos)[0]
         while ethertype in ETHERTYPE_VLAN:
             pos += 4
             if len(data) < pos + 2:
-                return None
+                raise _Skip(SKIP_LINK_TRUNCATED, "VLAN")
             ethertype = struct.unpack_from("!H", data, pos)[0]
         return _from_ethertype(ethertype, pos + 2)
     if linktype == LINKTYPE_LINUX_SLL:
         if len(data) < 16:
-            return None
+            raise _Skip(SKIP_LINK_TRUNCATED, "Linux cooked")
         return _from_ethertype(struct.unpack_from("!H", data, 14)[0], 16)
     if linktype == LINKTYPE_LINUX_SLL2:
         if len(data) < 20:
-            return None
+            raise _Skip(SKIP_LINK_TRUNCATED, "Linux cooked v2")
         return _from_ethertype(struct.unpack_from("!H", data, 0)[0], 20)
     if linktype == LINKTYPE_NULL:
         if len(data) < 4:
-            return None
+            raise _Skip(SKIP_LINK_TRUNCATED, "loopback")
         # Họ địa chỉ ghi theo thứ tự byte của máy bắt gói; thử cả hai chiều.
         for fmt in ("<I", ">I"):
             family = struct.unpack_from(fmt, data, 0)[0]
@@ -138,13 +272,15 @@ def network_offset(linktype: int, data: bytes) -> tuple[int, int] | None:
                 return 4, 4
             if family in NULL_AF_INET6:
                 return 4, 6
-        return None
+        raise _Skip(SKIP_NON_IP, f"họ địa chỉ {struct.unpack_from('<I', data, 0)[0]}")
     if linktype in (LINKTYPE_RAW, LINKTYPE_IPV4, LINKTYPE_IPV6):
         if not data:
-            return None
+            raise _Skip(SKIP_IP_TRUNCATED, "IP thô rỗng")
         version = data[0] >> 4
-        return (0, version) if version in (4, 6) else None
-    return None
+        if version not in (4, 6):
+            raise _Skip(SKIP_IP_INVALID, f"phiên bản {version}")
+        return 0, version
+    raise _Skip(SKIP_LINKTYPE, f"LINKTYPE {linktype}")
 
 
 def _from_ethertype(ethertype, pos):
@@ -152,30 +288,120 @@ def _from_ethertype(ethertype, pos):
         return pos, 4
     if ethertype == ETHERTYPE_IPV6:
         return pos, 6
-    return None
+    raise _Skip(SKIP_NON_IP, ethertype_name(ethertype))
+
+
+def ethertype_name(ethertype: int) -> str:
+    """Tên EtherType dùng trong thống kê, ví dụ "ARP (0x0806)"."""
+    if ethertype < 0x0600:
+        # Giá trị nhỏ hơn 0x0600 là trường độ dài của khung 802.3, theo sau là LLC.
+        return "802.3/LLC"
+    name = ETHERTYPE_NAMES.get(ethertype)
+    return f"{name} (0x{ethertype:04x})" if name else f"0x{ethertype:04x}"
+
+
+def inspect_packet(pkt: RawPacket) -> ParseResult:
+    """Phân tích một packet; nếu bỏ qua thì ghi lý do, nếu giữ thì ghi các điểm bất thường."""
+    try:
+        record, notes = _parse(pkt)
+    except _Skip as skip:
+        return ParseResult(None, skip.reason, skip.detail)
+    return ParseResult(record, notes=notes)
 
 
 def parse_packet(pkt: RawPacket) -> PacketRecord | None:
     """Trích xuất các trường IP của một packet; None nếu không phải gói IP đọc được."""
-    found = network_offset(pkt.linktype, pkt.data)
-    if found is None:
-        return None
-    pos, version = found
+    return inspect_packet(pkt).record
+
+
+def _parse(pkt):
+    pos, version = _network_offset(pkt.linktype, pkt.data)
+    notes = []
     if version == 4:
-        fields_ = _parse_ipv4(pkt.data, pos)
+        src, dst, proto, ip_len, l4_offset, is_fragment = _parse_ipv4(pkt.data, pos, notes)
     else:
-        fields_ = _parse_ipv6(pkt.data, pos)
-    if fields_ is None:
-        return None
-    src, dst, proto, ip_len, l4_offset, is_fragment = fields_
+        src, dst, proto, ip_len, l4_offset, is_fragment = _parse_ipv6(pkt.data, pos, notes)
     src_port = dst_port = tcp_flags = None
     if l4_offset is not None and proto in PORT_PROTOCOLS:
         # Chỉ đọc trong phạm vi gói IP để không lấy nhầm byte đệm của khung Ethernet.
         end = min(len(pkt.data), pos + ip_len)
         src_port, dst_port, tcp_flags = _parse_l4(pkt.data, l4_offset, end, proto)
-    return PacketRecord(pkt.index, pkt.ts_ns, src, dst, version, proto,
-                        pkt.origlen, ip_len, pkt.caplen, l4_offset, is_fragment,
-                        src_port, dst_port, tcp_flags)
+        if src_port is None or (proto == PROTO_TCP and tcp_flags is None):
+            notes.append(NOTE_L4_TRUNCATED)
+    if pkt.truncated:
+        notes.append(NOTE_SNAPLEN)
+    elif pos + ip_len > len(pkt.data):
+        notes.append(NOTE_IP_LEN_OVER)
+    if is_fragment:
+        notes.append(NOTE_FRAGMENT)
+    if pkt.ts_ns is None:
+        notes.append(NOTE_NO_TS)
+    record = PacketRecord(pkt.index, pkt.ts_ns, src, dst, version, proto,
+                          pkt.origlen, ip_len, pkt.caplen, l4_offset, is_fragment,
+                          src_port, dst_port, tcp_flags)
+    return record, tuple(notes)
+
+
+def _parse_ipv4(data, pos, notes):
+    if len(data) < pos + 20:
+        raise _Skip(SKIP_IP_TRUNCATED, "IPv4")
+    ver_ihl, _tos, total_len, _ident, flags_frag, _ttl, proto = struct.unpack_from(
+        "!BBHHHBB", data, pos
+    )
+    ihl = (ver_ihl & 0x0F) * 4
+    if ver_ihl >> 4 != 4:
+        raise _Skip(SKIP_IP_INVALID, f"IPv4: phiên bản {ver_ihl >> 4}")
+    if ihl < 20:
+        raise _Skip(SKIP_IP_INVALID, "IPv4: IHL nhỏ hơn 20 byte")
+    if total_len == 0 and len(data) >= pos + ihl:
+        # Gói gửi đi được bắt trước khi card mạng chia đoạn (TSO) có Total Length 0;
+        # Wireshark khi đó lấy độ dài theo số byte đã bắt, ở đây làm giống vậy.
+        total_len = len(data) - pos
+        notes.append(NOTE_IP_LEN_ZERO)
+    elif total_len < ihl:
+        raise _Skip(SKIP_IP_INVALID, "IPv4: Total Length nhỏ hơn header")
+    frag_offset = flags_frag & 0x1FFF
+    more_fragments = bool(flags_frag & 0x2000)
+    src = socket.inet_ntoa(data[pos + 12:pos + 16])
+    dst = socket.inet_ntoa(data[pos + 16:pos + 20])
+    l4_offset = pos + ihl if frag_offset == 0 else None
+    return src, dst, proto, total_len, l4_offset, more_fragments or frag_offset > 0
+
+
+def _parse_ipv6(data, pos, notes):
+    if len(data) < pos + 40:
+        raise _Skip(SKIP_IP_TRUNCATED, "IPv6")
+    if data[pos] >> 4 != 6:
+        raise _Skip(SKIP_IP_INVALID, f"IPv6: phiên bản {data[pos] >> 4}")
+    payload_len, next_header = struct.unpack_from("!HB", data, pos + 4)
+    src = IPv6Address(data[pos + 8:pos + 24]).compressed
+    dst = IPv6Address(data[pos + 24:pos + 40]).compressed
+    offset = pos + 40
+    is_fragment = False
+    first_fragment = True
+    # Đi qua các header mở rộng để tới giao thức tầng trên.
+    while next_header in (IPV6_EXT_HOP_BY_HOP, IPV6_EXT_ROUTING, IPV6_EXT_FRAGMENT,
+                          IPV6_EXT_AH, IPV6_EXT_DEST_OPTS):
+        if len(data) < offset + 8:
+            # Header mở rộng bị cắt: vẫn biết địa chỉ nhưng không biết giao thức.
+            notes.append(NOTE_L4_TRUNCATED)
+            return src, dst, next_header, 40 + payload_len, None, is_fragment
+        nxt, hdr_len = data[offset], data[offset + 1]
+        if next_header == IPV6_EXT_FRAGMENT:
+            is_fragment = True
+            frag_offset = struct.unpack_from("!H", data, offset + 2)[0] >> 3
+            first_fragment = frag_offset == 0
+            size = 8
+        elif next_header == IPV6_EXT_AH:
+            size = (hdr_len + 2) * 4
+        else:
+            size = (hdr_len + 1) * 8
+        next_header = nxt
+        offset += size
+        if not first_fragment:
+            break
+    l4_offset = offset if first_fragment and next_header != IPV6_NO_NEXT else None
+    return src, dst, next_header, 40 + payload_len, l4_offset, is_fragment
 
 
 def _parse_l4(data, pos, end, proto):
@@ -196,65 +422,30 @@ def tcp_flag_names(flags: int | None) -> str:
     return ",".join(name for bit, name in TCP_FLAG_NAMES if flags & bit)
 
 
-def _parse_ipv4(data, pos):
-    if len(data) < pos + 20:
-        return None
-    ver_ihl, _tos, total_len, _ident, flags_frag, _ttl, proto = struct.unpack_from(
-        "!BBHHHBB", data, pos
-    )
-    ihl = (ver_ihl & 0x0F) * 4
-    if ver_ihl >> 4 != 4 or ihl < 20 or total_len < ihl:
-        return None
-    frag_offset = flags_frag & 0x1FFF
-    more_fragments = bool(flags_frag & 0x2000)
-    src = socket.inet_ntoa(data[pos + 12:pos + 16])
-    dst = socket.inet_ntoa(data[pos + 16:pos + 20])
-    l4_offset = pos + ihl if frag_offset == 0 else None
-    return src, dst, proto, total_len, l4_offset, more_fragments or frag_offset > 0
+def extract_packets(path, stats: ParseStats | None = None):
+    """Duyệt các gói IP của một file PCAP/PCAPNG; bỏ qua gói không đọc được.
 
-
-def _parse_ipv6(data, pos):
-    if len(data) < pos + 40:
-        return None
-    if data[pos] >> 4 != 6:
-        return None
-    payload_len, next_header = struct.unpack_from("!HB", data, pos + 4)
-    src = IPv6Address(data[pos + 8:pos + 24]).compressed
-    dst = IPv6Address(data[pos + 24:pos + 40]).compressed
-    offset = pos + 40
-    is_fragment = False
-    first_fragment = True
-    # Đi qua các header mở rộng để tới giao thức tầng trên.
-    while next_header in (IPV6_EXT_HOP_BY_HOP, IPV6_EXT_ROUTING, IPV6_EXT_FRAGMENT,
-                          IPV6_EXT_AH, IPV6_EXT_DEST_OPTS):
-        if len(data) < offset + 8:
-            # Header mở rộng bị cắt: vẫn biết địa chỉ nhưng không biết giao thức.
-            return src, dst, next_header, 40 + payload_len, None, is_fragment
-        nxt, hdr_len = data[offset], data[offset + 1]
-        if next_header == IPV6_EXT_FRAGMENT:
-            is_fragment = True
-            frag_offset = struct.unpack_from("!H", data, offset + 2)[0] >> 3
-            first_fragment = frag_offset == 0
-            size = 8
-        elif next_header == IPV6_EXT_AH:
-            size = (hdr_len + 2) * 4
-        else:
-            size = (hdr_len + 1) * 8
-        next_header = nxt
-        offset += size
-        if not first_fragment:
-            break
-    l4_offset = offset if first_fragment and next_header != IPV6_NO_NEXT else None
-    return src, dst, next_header, 40 + payload_len, l4_offset, is_fragment
-
-
-def extract_packets(path):
-    """Duyệt các gói IP của một file PCAP/PCAPNG; bỏ qua gói không đọc được."""
+    Khi truyền ``stats``, số gói bỏ qua được đếm vào đó, và nếu file hỏng giữa
+    chừng thì dừng đọc, ghi lỗi vào ``stats.file_error`` thay vì ném ngoại lệ;
+    các gói trước chỗ hỏng vẫn được trả về. Không truyền ``stats`` thì
+    PcapFormatError được ném ra như bình thường. File không mở được hoặc sai
+    header luôn ném ngoại lệ.
+    """
     with PcapReader(path) as reader:
-        for pkt in reader:
-            rec = parse_packet(pkt)
-            if rec is not None:
-                yield rec
+        try:
+            for pkt in reader:
+                result = inspect_packet(pkt)
+                if stats is not None:
+                    stats.add(pkt, result)
+                if result.record is not None:
+                    yield result.record
+        except PcapFormatError as exc:
+            if stats is None:
+                raise
+            stats.file_error = str(exc)
+        finally:
+            if stats is not None:
+                stats.read_file_state(reader)
 
 
 CSV_COLUMNS = ("index", "ts", "src_ip", "dst_ip", "ip_version", "protocol",
@@ -277,46 +468,45 @@ def main(argv=None):
     )
     parser.add_argument("file", help="đường dẫn file .pcap hoặc .pcapng")
     parser.add_argument("--csv", help="ghi bảng packet ra file CSV")
+    parser.add_argument("--stats", help="ghi thống kê gói bỏ qua ra file JSON")
     parser.add_argument("-n", "--count", type=int, default=10,
                         help="số gói IP đầu tiên được in (mặc định: %(default)s)")
     args = parser.parse_args(argv)
 
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    total = ip_count = 0
-    by_proto = {}
+    stats = ParseStats()
+    by_proto = Counter()
     out = writer = None
     try:
         if args.csv:
             out = open(args.csv, "w", encoding="utf-8", newline="")
             writer = csv.DictWriter(out, fieldnames=CSV_COLUMNS)
             writer.writeheader()
-        with PcapReader(args.file) as reader:
-            for pkt in reader:
-                total += 1
-                rec = parse_packet(pkt)
-                if rec is None:
-                    continue
-                if ip_count < args.count:
-                    row = _csv_row(rec)
-                    src = _endpoint(rec.src_ip, rec.src_port)
-                    dst = _endpoint(rec.dst_ip, rec.dst_port)
-                    flags = f" [{rec.tcp_flag_names}]" if rec.tcp_flags is not None else ""
-                    print(f"{rec.index:>6}  {row['ts']}  {src} -> {dst}"
-                          f"  {rec.protocol_name}{flags}  frame={rec.frame_len} ip={rec.ip_len}")
-                ip_count += 1
-                by_proto[rec.protocol_name] = by_proto.get(rec.protocol_name, 0) + 1
-                if writer:
-                    writer.writerow(_csv_row(rec))
+        for rec in extract_packets(args.file, stats):
+            if stats.kept <= args.count:
+                row = _csv_row(rec)
+                src = _endpoint(rec.src_ip, rec.src_port)
+                dst = _endpoint(rec.dst_ip, rec.dst_port)
+                flags = f" [{rec.tcp_flag_names}]" if rec.tcp_flags is not None else ""
+                print(f"{rec.index:>6}  {row['ts']}  {src} -> {dst}"
+                      f"  {rec.protocol_name}{flags}  frame={rec.frame_len} ip={rec.ip_len}")
+            by_proto[rec.protocol_name] += 1
+            if writer:
+                writer.writerow(_csv_row(rec))
     finally:
         if out:
             out.close()
     print()
-    print(f"Tổng packet: {total}; gói IP: {ip_count}; không phải IP hoặc lỗi: {total - ip_count}")
-    print("Theo giao thức: " + ", ".join(
-        f"{name}={n}" for name, n in sorted(by_proto.items(), key=lambda x: -x[1])))
+    print("\n".join(stats.summary_lines()))
+    print("Theo giao thức: " + ", ".join(f"{name}={n}" for name, n in by_proto.most_common()))
     if args.csv:
         print(f"Đã ghi CSV: {args.csv}")
+    if args.stats:
+        with open(args.stats, "w", encoding="utf-8") as f:
+            json.dump(stats.as_dict(), f, ensure_ascii=False, indent=2)
+        print(f"Đã ghi thống kê: {args.stats}")
+    return 1 if stats.file_error else 0
 
 
 def _endpoint(ip, port):
@@ -326,4 +516,4 @@ def _endpoint(ip, port):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
