@@ -94,3 +94,26 @@ C03-T07.
 (600 MB) trên máy phát triển. Một file PCAP 10 GB của CIC-IDS2017 cỡ vài chục
 triệu packet sẽ mất vài phút chỉ để đọc. Đây là số đo trên dữ liệu tổng hợp,
 chưa đo trên file CIC-IDS2017 thật.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Bộ đọc (reader) | Phần mã mở file và lấy ra lần lượt từng bản ghi |
+| Packet | Một gói tin |
+| RawPacket | Bản ghi thô của một gói: thời điểm, độ dài và byte gốc, chưa phân tích nội dung |
+| Epoch UTC | Mốc 00:00:00 UTC ngày 01/01/1970; thời điểm ghi bằng số giây hoặc nano giây tính từ mốc này |
+| Số nguyên / float | Số nguyên là chính xác tuyệt đối; float là số thực máy tính, có thể sai ở chữ số rất nhỏ |
+| caplen / origlen | Số byte lưu trong file / độ dài thật của gói trên đường truyền |
+| LINKTYPE | Mã kiểu tầng liên kết, cho biết byte đầu của gói thuộc header nào (1 là Ethernet) |
+| Giao diện (interface) | Một card mạng |
+| Little-endian / big-endian | Hai cách xếp byte của một số; little-endian để byte nhỏ trước |
+| SHB, IDB, EPB, SPB | Các khối của PCAPNG: mở đầu section; mô tả card mạng; gói tin đầy đủ; gói tin tối giản không có thời điểm |
+| if_tsresol, if_tsoffset | Thông tin của từng card mạng trong PCAPNG: đơn vị thời gian và độ lệch thời gian |
+| PcapFormatError | Lỗi chương trình báo khi file không phải PCAP/PCAPNG hoặc bị hỏng |
+| Context manager (`with`) | Cú pháp Python tự đóng file khi dùng xong, kể cả khi có lỗi |
+| Dòng lệnh (CLI) | Chạy chương trình bằng lệnh gõ trong terminal |
+| TShark, editcap | Bản dòng lệnh của Wireshark / công cụ chuyển đổi file đi kèm |
+| Đọc theo luồng | Đọc từng phần của file, không nạp cả file vào bộ nhớ |

@@ -53,3 +53,26 @@ Chi tiết: [02_dau_ra_module.md](02_dau_ra_module.md), `src/nids/scope.py`.
   yếu dựa vào dữ liệu lab.
 - Chưa tải được dữ liệu CIC-IDS2017 nên tên file và số flow chưa đối chiếu.
 - Mô hình cho module botnet và cách nhận diện topology chốt ở Chặng 8.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Bộ dữ liệu (dataset) | Tập dữ liệu dùng để huấn luyện và đánh giá mô hình |
+| Ground truth (dữ liệu chuẩn) | Đáp án đúng đã biết của mỗi mẫu, dùng để chấm mô hình |
+| Mô hình học máy | Chương trình học quy luật từ dữ liệu mẫu rồi dự đoán cho dữ liệu mới |
+| Gaussian đa biến | Mô hình thống kê mô tả dữ liệu bình thường bằng trung bình và độ phân tán của nhiều đặc trưng; mẫu quá xa bị coi là bất thường |
+| Random Forest | Mô hình phân loại gồm nhiều cây quyết định bỏ phiếu |
+| Logistic Regression | Mô hình phân loại tính xác suất từ tổng có trọng số của các đặc trưng |
+| Validation | Dữ liệu dùng để chọn ngưỡng và tham số |
+| Host | Một máy trong mạng |
+| Topology | Hình dạng mạng giao tiếp: tập trung hay ngang hàng |
+| Đặc trưng đồ thị | Con số tính từ đồ thị giao tiếp, ví dụ một máy liên lạc với bao nhiêu máy khác |
+| Cổng lọc | Bước bắt buộc phải qua trước; module bất thường không chặn hai module kia |
+| Lịch tấn công công bố | Bảng giờ và địa chỉ của các đợt tấn công do tác giả bộ dữ liệu đăng |
+| Binetflow, cột Label | File flow có nhãn của CTU-13; cột Label chứa nhãn của mỗi flow |
+| Background | Traffic chưa được kiểm chứng của mạng trường trong CTU-13 |
+| Nhật ký lần chạy | File ghi mỗi lần thử nghiệm trong lab; là căn cứ gán nhãn |
+| SYN, p2p | SYN là gói mở kết nối TCP, DoS SYN gửi ồ ạt gói này; p2p là mạng ngang hàng |

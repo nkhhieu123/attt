@@ -95,3 +95,21 @@ không hợp lệ; mã thoát của lệnh.
 - `start_ts` chỉ chính xác tới mili giây, và `$request_time` tính từ khi Nginx
   đọc byte đầu tiên của yêu cầu, không phải từ lúc bắt tay TCP. Cửa sổ ghép với
   flow cần dung sai vài chục mili giây; chốt khi làm phần ghép ở chặng sau.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Đối chiếu | So kết quả của chương trình với dữ liệu gốc để chắc là đúng |
+| Cách đọc độc lập | Đọc lại dữ liệu bằng một cách khác hẳn chương trình chính; hai cách cùng kết quả thì đáng tin hơn |
+| Codec `unicode_escape` | Bộ giải mã có sẵn của Python, đổi chuỗi `\xHH` thành ký tự |
+| Decimal | Kiểu số thập phân chính xác của Python, không sai số như float |
+| Seed | Số khởi đầu cho bộ chọn ngẫu nhiên; cùng seed thì lần nào cũng chọn ra cùng các dòng |
+| Mẫu (sample) | Một số dòng được chọn ra để kiểm tra thay vì kiểm tra hết |
+| Ký tự điều khiển | Ký tự không in ra được như xuống dòng, tab hay byte 0x16 |
+| pandas.read_csv | Hàm của thư viện pandas đọc file CSV thành bảng |
+| Mã thoát | Số chương trình trả về khi kết thúc: 0 là khớp, 1 là có lệch |
+| Dung sai | Khoảng chênh lệch cho phép khi so hai thời điểm |
+| Bắt tay TCP | Ba gói mở kết nối (SYN, SYN+ACK, ACK) trước khi gửi yêu cầu |

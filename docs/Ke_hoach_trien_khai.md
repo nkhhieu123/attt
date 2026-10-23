@@ -365,3 +365,41 @@ Tiền xử lý, pipeline, mô hình và chỉ số đánh giá cho chặng 5 đ
 Đồ thị và đặc trưng giao tiếp phục vụ chặng 8.
 
 <https://networkx.org/documentation/stable/>
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Pipeline | Chuỗi bước xử lý nối tiếp nhau: đọc dữ liệu → trích đặc trưng → mô hình → cảnh báo |
+| Scapy, PyShark, dpkt | Ba thư viện Python đọc gói tin; PyShark cần cài TShark |
+| 5-tuple | Năm giá trị xác định một kết nối: IP nguồn, IP đích, cổng nguồn, cổng đích, giao thức |
+| Flow, snapshot flow | Flow là toàn bộ gói của một kết nối; snapshot là trạng thái của flow tại một thời điểm trong cửa sổ |
+| Forward / backward | Chiều đi (từ bên mở kết nối) / chiều về |
+| Inter-arrival time | Khoảng thời gian giữa hai gói liên tiếp |
+| Entropy cổng đích | Độ đa dạng của các cổng đích; quét cổng cho entropy cao vì chạm rất nhiều cổng khác nhau |
+| Kết nối không hoàn tất | Có gói SYN mở kết nối nhưng không có phản hồi đầy đủ |
+| Tái sử dụng 5-tuple | Cùng 5 giá trị nhưng là kết nối mới sau khi kết nối cũ đã đóng |
+| EDA | Phân tích khám phá dữ liệu: thống kê và vẽ biểu đồ để hiểu dữ liệu trước khi huấn luyện |
+| Supervised | Học có giám sát: mô hình học từ dữ liệu đã có nhãn đúng |
+| Brute-force, exploit | Dò mật khẩu bằng cách thử liên tục / khai thác lỗ hổng phần mềm |
+| Rò rỉ dữ liệu (data leakage) | Thông tin của tập test lọt vào lúc huấn luyện, làm kết quả đẹp giả tạo |
+| Fit tiền xử lý | Tính tham số của bước tiền xử lý (ví dụ trung bình để chuẩn hóa) từ dữ liệu |
+| Cân bằng lớp | Xử lý khi một lớp có quá ít mẫu so với lớp khác |
+| Covariance suy biến | Ma trận hiệp phương sai không nghịch đảo được (ví dụ hai đặc trưng trùng nhau), làm mô hình Gaussian không tính được |
+| False positive rate | Tỷ lệ mẫu bình thường bị cảnh báo nhầm |
+| Accuracy | Tỷ lệ dự đoán đúng trên tổng số mẫu |
+| Precision / Recall / F1 / macro-F1 | Tỷ lệ cảnh báo đúng / tỷ lệ tấn công bắt được / điểm cân bằng hai chỉ số / trung bình F1 của các lớp |
+| Confusion matrix | Bảng đếm mỗi lớp thật bị đoán thành lớp nào |
+| Artifact | Sản phẩm của bước huấn luyện cần lưu lại: mô hình, bộ tiền xử lý, ngưỡng |
+| Node, cạnh, trọng số | Thành phần của đồ thị: điểm (máy), đường nối (có trao đổi), con số trên đường nối (ví dụ số kết nối) |
+| Bậc vào / ra | Số máy gửi tới một máy / số máy mà nó gửi tới |
+| Tính tương hỗ | Hai máy có liên lạc theo cả hai chiều hay không |
+| Cảm biến (sensor) | Máy đặt ở vị trí thấy được traffic để bắt gói; ở đây là Kali |
+| Hàng đợi, state | Hàng đợi chứa gói chờ xử lý; state là dữ liệu chương trình giữ trong bộ nhớ, như các flow đang mở |
+| systemd | Hệ thống quản lý dịch vụ chạy nền của Linux |
+| CLI | Giao diện dòng lệnh |
+| Firewall | Tường lửa: chặn hoặc cho qua gói tin theo luật |
+| scikit-learn, NetworkX | Thư viện Python cho học máy / cho đồ thị |
+| Clone | Tải toàn bộ kho mã từ GitHub về máy |

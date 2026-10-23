@@ -251,3 +251,48 @@ Phần mở rộng file không đáng tin, vì Wireshark có thể lưu PCAPNG v
 - IETF, *PCAP Next Generation (pcapng) Capture File Format*, draft-ietf-opsawg-pcapng.
 - The Tcpdump Group, *Link-Layer Header Types*, https://www.tcpdump.org/linktypes.html
 - Trang hướng dẫn `pcap-savefile(5)`.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| PCAP | Định dạng file cũ và phổ biến nhất để lưu gói tin bắt được; do tcpdump tạo ra |
+| PCAPNG | PCAP Next Generation: định dạng mới hơn, linh hoạt hơn, là mặc định của Wireshark |
+| Header | Phần đầu chứa thông tin mô tả; ở đây là header của file và của từng bản ghi, khác với header của giao thức mạng |
+| Byte, offset | Byte là 8 bit; offset là vị trí tính từ đầu, đếm bằng byte và bắt đầu từ 0 |
+| Hệ 16 (hex), 0x | Cách viết số dùng 0–9 và a–f; `0x` đứng trước để báo là số hệ 16. Một byte viết bằng hai chữ số hex, ví dụ `2a` = 42 |
+| Thứ tự byte (endian) | Cách xếp các byte của một số nhiều byte. Little-endian để byte nhỏ trước (máy x86), big-endian để byte lớn trước (chuẩn của mạng) |
+| Timestamp | Thời điểm, ở đây là lúc máy giám sát bắt được gói |
+| Epoch | Mốc 00:00:00 UTC ngày 01/01/1970; thời điểm được ghi bằng số giây tính từ mốc này |
+| Micro giây / nano giây | Một phần triệu / một phần tỷ giây |
+| snaplen | Số byte tối đa được lưu cho mỗi gói; phần thừa bị cắt bỏ |
+| Payload | Phần dữ liệu thật mà gói mang theo, nằm sau các header |
+| Tầng liên kết (link layer) | Tầng thấp nhất trong file, như Ethernet hay Wi-Fi; quyết định gói bắt đầu bằng header nào |
+| LINKTYPE | Mã số chỉ kiểu tầng liên kết, ví dụ 1 là Ethernet |
+| Loopback | Card mạng ảo để máy nói chuyện với chính nó (127.0.0.1) |
+| 802.11, radiotap | 802.11 là chuẩn Wi-Fi; radiotap là header thêm thông tin sóng vô tuyến khi bắt gói Wi-Fi |
+| Linux cooked (SLL) | Header giả do Linux tạo khi bắt trên mọi card mạng cùng lúc (`tcpdump -i any`); thay cho header Ethernet |
+| FCS | Mã kiểm tra lỗi 4 byte ở cuối khung Ethernet; thường không được lưu |
+| incl_len / orig_len | Số byte thực sự lưu trong file / độ dài thật của gói trên đường truyền |
+| Ethernet, khung (frame) | Ethernet là chuẩn mạng có dây; một gói ở tầng Ethernet gọi là khung |
+| MAC | Địa chỉ phần cứng 6 byte của card mạng, ví dụ `08:00:27:aa:bb:01` |
+| Broadcast | Gửi cho mọi máy trong mạng; địa chỉ MAC broadcast là `ff:ff:ff:ff:ff:ff` |
+| EtherType | 2 byte trong header Ethernet cho biết bên trong là gì: `0x0800` IPv4, `0x86DD` IPv6, `0x0806` ARP |
+| VLAN 802.1Q | Thẻ 4 byte chèn vào khung Ethernet để chia một mạng thành nhiều mạng logic |
+| Preamble | Chuỗi bit đồng bộ đứng trước mỗi khung Ethernet trên dây; card mạng bỏ đi nên không có trong file |
+| IPv4, IPv6 | Hai phiên bản giao thức địa chỉ Internet: IPv4 dạng `192.168.50.20`, IPv6 dạng `fe80::1` |
+| TCP, UDP | TCP: giao thức có kết nối, bảo đảm dữ liệu tới đủ và đúng thứ tự (web, SSH). UDP: gửi đi không cần kết nối, không bảo đảm (DNS, video) |
+| ARP | Giao thức hỏi "IP này là máy có MAC nào" trong mạng nội bộ |
+| Opcode | Mã thao tác trong gói ARP: 1 là hỏi, 2 là trả lời |
+| Block, option | Block là một khối dữ liệu có kiểu và độ dài trong PCAPNG; option là thông tin phụ dạng mã–độ dài–giá trị gắn vào block |
+| Section | Một phần của file PCAPNG, mở đầu bằng SHB |
+| SHB, IDB, EPB, SPB, NRB, ISB, DSB | Các kiểu block của PCAPNG: mở đầu section; mô tả card mạng; gói tin đầy đủ; gói tin tối giản không có thời điểm; bảng tên miền; thống kê card mạng; khóa giải mã |
+| Giao diện (interface) | Một card mạng, thật hoặc ảo, ví dụ `eth0` |
+| if_tsresol | Option của IDB cho biết đơn vị thời gian của giao diện đó |
+| TLS | Giao thức mã hóa dùng cho HTTPS |
+| tcpdump, Wireshark, dumpcap, tshark | Công cụ bắt và xem gói tin: tcpdump chạy dòng lệnh; Wireshark có giao diện đồ họa; dumpcap và tshark là bản dòng lệnh đi kèm Wireshark |
+| capinfos, editcap | Công cụ đi kèm Wireshark: xem thông tin file / chuyển đổi và cắt file |
+| Scapy | Thư viện Python để bắt và tạo gói tin |
+| Mất gói | Gói đi qua mạng nhưng máy giám sát không kịp ghi |

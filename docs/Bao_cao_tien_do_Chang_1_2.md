@@ -342,3 +342,32 @@ Song song với Chặng 3:
 - Tải 11 file `.binetflow` còn lại của CTU-13.
 - Dựng mạng lab, cài Nginx với định dạng log `nids`, kiểm tra mirror thấy cả
   hai chiều.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Chặng, task | Chặng là một giai đoạn của kế hoạch; task là một việc cụ thể trong chặng |
+| Kho mã nguồn (repository) | Nơi lưu mã và tài liệu của dự án trên GitHub, kèm lịch sử thay đổi |
+| Nhánh `main` | Dòng phát triển chính của kho mã |
+| Module | Một phần độc lập của hệ thống; dự án có ba module phát hiện |
+| Gaussian đa biến, Random Forest, Logistic Regression | Ba mô hình học máy: phát hiện bất thường; phân loại bằng nhiều cây quyết định; phân loại bằng xác suất |
+| Beaconing | Bot định kỳ gọi về máy điều khiển theo chu kỳ đều |
+| Schema | Danh sách cột cố định và ý nghĩa từng cột |
+| UTC, ISO 8601 | Giờ chuẩn quốc tế / cách viết ngày giờ chuẩn như `2026-10-11T12:46:28Z` |
+| Dependencies | Các thư viện mà dự án cần cài |
+| .gitignore | File liệt kê những gì không đưa lên git (dữ liệu, mô hình, file tạm) |
+| Random seed | Số khởi đầu cho phép ngẫu nhiên, để chạy lại cho cùng kết quả |
+| PCAP, PCAPNG | Hai định dạng file lưu gói tin bắt được |
+| snaplen, incl_len, orig_len | Số byte tối đa lưu mỗi gói / số byte đã lưu / độ dài thật của gói |
+| Access log, Nginx | Log của máy chủ web Nginx, một dòng một yêu cầu |
+| NAT | Bộ chuyển địa chỉ trên tường lửa, làm địa chỉ nguồn nhìn thấy khác địa chỉ thật |
+| Binetflow | File flow hai chiều có nhãn của CTU-13 |
+| Background | Traffic chưa kiểm chứng của mạng trường trong CTU-13 |
+| Manifest | Bảng liệt kê mọi nguồn dữ liệu và cách dùng |
+| NETRESEC | Trang web liệt kê liên kết tới nhiều kho PCAP; không phải một bộ dữ liệu |
+| Mirror | Sao chép traffic của switch sang máy giám sát |
+| Train / validation / test | Dữ liệu để học / để chọn tham số và ngưỡng / để đánh giá cuối |
+| Ca kiểm thử | Một kiểm tra tự động của chương trình |

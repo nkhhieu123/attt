@@ -56,3 +56,25 @@ Dạng một dòng trên terminal:
 
 Mặc định chỉ dự đoán là cảnh báo mới được ghi. Bật `log_all` để lưu cả dự đoán
 bình thường vào CSV, cần cho việc tính báo động giả và confusion matrix.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Module | Một phần độc lập của hệ thống, làm một việc riêng |
+| Anomaly / attack classification / botnet-topology | Phát hiện bất thường / phân loại tấn công / phát hiện botnet và hình dạng mạng giao tiếp |
+| Nhãn (label) | Kết quả mà module trả về cho một mẫu, ví dụ `port_scan` |
+| Nhãn sinh cảnh báo | Nhãn mà khi module đoán ra thì ghi cảnh báo; nhãn bình thường thì không |
+| Host–cửa sổ | Đơn vị đánh giá: một máy trong một đoạn thời gian. Ví dụ máy .41 trong 120 giây đầu là một mẫu |
+| Centralized / p2p / none | Tập trung (có máy điều khiển trung tâm) / ngang hàng / không có cấu trúc botnet |
+| Confusion matrix | Bảng đếm mỗi lớp thật bị đoán thành lớp nào |
+| Schema | Danh sách cột cố định và ý nghĩa từng cột của một bảng dữ liệu |
+| UTC | Giờ chuẩn quốc tế, không theo múi giờ; Việt Nam là UTC+7 |
+| ISO 8601 | Cách viết ngày giờ chuẩn quốc tế, ví dụ `2026-10-11T12:46:28.876Z`; chữ Z nghĩa là giờ UTC |
+| Score, threshold | Điểm của mô hình và ngưỡng; điểm vượt ngưỡng thì cảnh báo |
+| run_id | Mã của một lần chạy thử nghiệm, để nối cảnh báo với nhật ký lần chạy |
+| Node trung tâm | Máy mà các bot cùng liên lạc tới trong mạng tập trung |
+| log_all | Tùy chọn ghi cả dự đoán bình thường, không chỉ cảnh báo |
+| Báo động giả | Cảnh báo khi thực ra không có tấn công |

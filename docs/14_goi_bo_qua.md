@@ -103,3 +103,26 @@ Hai bản thu CTU-13 không có gói bị cắt, phân mảnh hay header hỏng,
 chú và các lý do còn lại mới được kiểm tra bằng dữ liệu tổng hợp. Cần xem lại
 thống kê khi có PCAP lab thật, nhất là `ip_len_bang_0` nếu bắt gói trên chính
 máy Kali gửi traffic.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Bỏ qua (skip) | Gói không dùng được nên không đưa vào bảng, nhưng vẫn được đếm |
+| Ghi chú (note) | Dấu hiệu bất thường trên gói vẫn được giữ lại |
+| EtherType | 2 byte trong header Ethernet cho biết bên trong là gì: IPv4, IPv6, ARP, ... |
+| ARP, LLDP, STP | Giao thức hỏi địa chỉ MAC / giao thức thiết bị tự giới thiệu với nhau / giao thức chống vòng lặp của switch; đều không chở IP |
+| 802.3/LLC | Kiểu khung Ethernet cũ, thay EtherType bằng độ dài; thường dùng cho giao thức của switch |
+| LINKTYPE | Mã kiểu tầng liên kết của file |
+| IHL | Trường độ dài header IPv4, tính theo đơn vị 4 byte |
+| Total Length | Trường độ dài cả gói IPv4 |
+| ARP spoofing | Tấn công gửi trả lời ARP giả để chiếm lưu lượng của máy khác |
+| TSO | Card mạng tự chia gói lớn khi gửi; bắt trên chính máy gửi thấy gói chưa chia, Total Length bằng 0 |
+| Simple Packet Block | Kiểu khối gói tin tối giản của PCAPNG, không có thời điểm |
+| pcapfix | Công cụ sửa file PCAP bị hỏng |
+| JSON | Định dạng file chữ lưu dữ liệu có cấu trúc dạng `{"khóa": giá trị}` |
+| Mã thoát (exit code) | Số chương trình trả về khi kết thúc: 0 là thành công, khác 0 là có lỗi |
+| Ngoại lệ (exception) | Cách Python báo lỗi và dừng việc đang làm, trừ khi có mã bắt lỗi |
+| Khung (frame) số N trong Wireshark | Wireshark đánh số gói từ 1; số này bằng chỉ số trong chương trình cộng 1 |

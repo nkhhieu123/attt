@@ -118,3 +118,31 @@ Mẫu:
 - Bối cảnh: Bản thu có gói không phải IP (ARP chiếm 1,4% bản thu donbot của CTU-13), gói bị cắt, và có thể có file bị dừng ghi giữa chừng. Bỏ đi lặng lẽ sẽ làm sai lệch đặc trưng mà không ai biết.
 - Quyết định: Mỗi gói bị bỏ có một trong năm lý do (`khong_phai_ip`, `linktype_khong_ho_tro`, `header_lien_ket_bi_cat`, `header_ip_bi_cat`, `header_ip_sai`); gói giữ lại có ghi chú bất thường; `ParseStats` đếm cả hai (xem `docs/14_goi_bo_qua.md`). File hỏng giữa chừng thì dừng đọc, giữ các gói trước đó và ghi lỗi. IPv4 có Total Length 0 (TSO) được giữ, độ dài lấy theo số byte đã bắt như Wireshark.
 - Hệ quả: Nhật ký mỗi lần chạy lab phải lưu kết quả `ParseStats.as_dict()`. Lần chạy có `loi_file` hoặc tỉ lệ bỏ qua bất thường phải xem lại trước khi đưa vào train/test.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Nhật ký quyết định | Nơi ghi lại mỗi lựa chọn kỹ thuật quan trọng cùng lý do, để sau này biết vì sao làm vậy |
+| Đã chốt / Tạm thời | Đã chốt: không đổi nữa trừ khi có quyết định mới. Tạm thời: còn có thể đổi khi có thêm dữ liệu |
+| Schema cảnh báo | Danh sách cột cố định của file cảnh báo |
+| Cấu hình (config) | Tham số chỉnh được mà không sửa mã, nằm trong `config/default.yaml` |
+| Hợp đồng giữa các phần mã | Quy ước mà mọi phần mã cùng tuân theo, ví dụ tên nhãn; đổi một chỗ phải đổi mọi chỗ |
+| Validation | Phần dữ liệu dùng để chọn tham số và ngưỡng, tách riêng khỏi dữ liệu học và dữ liệu đánh giá cuối |
+| Timeout nhàn rỗi | Không thấy gói mới của một flow trong khoảng này thì coi flow đã kết thúc |
+| Môi trường ảo (.venv) | Thư mục chứa Python và thư viện riêng của dự án, không lẫn với máy |
+| numpy, pandas, scikit-learn, scapy, networkx, PyYAML, joblib | Thư viện Python: tính toán mảng số; xử lý bảng; mô hình học máy; bắt và đọc gói tin; đồ thị; đọc file YAML; lưu mô hình ra file |
+| Access log | File Nginx ghi mỗi yêu cầu web nhận được, một dòng một yêu cầu |
+| Binetflow | File flow hai chiều có nhãn của CTU-13 |
+| Manifest | Bảng liệt kê mọi nguồn dữ liệu và cách dùng |
+| struct | Thư viện có sẵn của Python để đọc các con số nằm trong chuỗi byte |
+| Scapy, PyShark, dpkt | Ba thư viện Python đọc gói tin; dự án tự viết phần đọc thay vì dùng chúng (QĐ-013, QĐ-014) |
+| TShark | Bản dòng lệnh của Wireshark |
+| Header | Phần đầu của gói tin hoặc file, chứa thông tin điều khiển như địa chỉ, độ dài |
+| Ethernet, VLAN | Ethernet là chuẩn mạng có dây phổ biến; VLAN là thẻ chia một mạng vật lý thành nhiều mạng logic |
+| Linux cooked, loopback | Kiểu ghi gói khi bắt trên mọi card mạng cùng lúc (`tcpdump -i any`); loopback là card ảo cho máy nói chuyện với chính nó |
+| TSO | Card mạng tự chia một gói lớn thành nhiều gói nhỏ khi gửi; bắt gói trên chính máy gửi sẽ thấy gói lớn chưa chia, có độ dài ghi bằng 0 |
+| Train/test | Dữ liệu để mô hình học / dữ liệu để đánh giá cuối |
+| B12 | Yêu cầu huấn luyện và realtime dùng cùng cách tính đặc trưng (docs/01) |

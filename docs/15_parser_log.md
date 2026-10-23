@@ -122,3 +122,27 @@ dang, thời gian giảm, dòng lệnh, cảnh báo sai định dạng.
 
 **Tốc độ:** khoảng 45 000 dòng/giây trên máy phát triển (480 000 dòng trong
 10,7 giây), đủ cho log của một lần chạy lab.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Parser | Phần mã đọc văn bản và tách thành các trường có cấu trúc |
+| Regex | Biểu thức chính quy: mẫu mô tả dạng của một chuỗi, dùng để kiểm tra và tách chuỗi |
+| Escape `\xHH` | Nginx thay ký tự đặc biệt bằng `\x` và hai chữ số hệ 16, ví dụ `"` thành `\x22`, để dòng log không bị vỡ |
+| UTF-8 | Cách mã hóa chữ thành byte; chữ có dấu tiếng Việt chiếm 2–3 byte |
+| ASCII | Bảng 128 ký tự cơ bản (chữ Latinh không dấu, số, dấu câu) |
+| Mã hóa URL `%XX` | Cách viết ký tự đặc biệt trong đường dẫn web, ví dụ dấu cách thành `%20` |
+| Keep-alive | Giữ một kết nối TCP cho nhiều yêu cầu liên tiếp |
+| Unix socket | Kênh giao tiếp giữa hai chương trình trên cùng máy, không qua mạng nên không có cổng |
+| HTTP/0.9, HTTP/1.1 | Các phiên bản giao thức web; HTTP/0.9 rất cũ, dòng yêu cầu không có phần phiên bản |
+| Mã 400, 408, 499, 502 | Yêu cầu sai / hết thời gian chờ client gửi / client tự ngắt / máy chủ phía sau lỗi |
+| Upstream | Máy chủ phía sau mà Nginx chuyển tiếp yêu cầu tới |
+| TLS | Giao thức mã hóa của HTTPS; gửi gói TLS vào cổng HTTP thường cho ra dòng log toàn byte lạ |
+| `nmap -sV` | Lệnh Nmap dò phiên bản dịch vụ bằng cách gửi thử nhiều kiểu dữ liệu |
+| Worker | Tiến trình con của Nginx xử lý yêu cầu; có thể có nhiều worker chạy song song |
+| .gz | File đã nén bằng gzip |
+| CRLF / LF | Ký tự xuống dòng: Windows dùng hai ký tự CRLF, Linux dùng một ký tự LF |
+| lru_cache | Cách Python nhớ kết quả các lần gọi trước để không phải tính lại |

@@ -121,3 +121,31 @@ Ngoài ra:
   một yêu cầu thử.
 - ~~Viết hàm đọc log thành bảng với 12 cột ở mục 3.~~ Đã làm ở C03-T05:
   `src/nids/service_log.py`, [15_parser_log.md](15_parser_log.md).
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Log dịch vụ | File mà một chương trình phục vụ (web, SSH, DNS, ...) ghi lại những gì nó đã làm |
+| Nginx | Phần mềm máy chủ web phổ biến |
+| Access log | Log của máy chủ web ghi mỗi yêu cầu nhận được, một dòng một yêu cầu |
+| log_format | Lệnh cấu hình của Nginx quy định mỗi dòng log gồm những trường nào |
+| Combined | Định dạng log mặc định của Nginx và Apache |
+| Biến Nginx (`$msec`, `$remote_addr`, ...) | Tên giá trị mà Nginx điền vào dòng log, ví dụ `$remote_addr` là IP của client |
+| Client / máy chủ (server) | Client là bên gửi yêu cầu (trình duyệt, curl); máy chủ là bên trả lời |
+| Cổng (port) | Số 0–65535 chỉ ra chương trình nào trên máy nhận dữ liệu; web thường ở cổng 80 |
+| HTTP, dòng yêu cầu | HTTP là giao thức của web; dòng yêu cầu là dòng đầu của mỗi yêu cầu, ví dụ `GET /status HTTP/1.1` (phương thức, đường dẫn, phiên bản) |
+| Mã trạng thái (status) | Số Nginx trả về: 200 thành công, 400 yêu cầu sai, 404 không tìm thấy, 408 hết thời gian chờ, 499 client tự ngắt, 502 máy chủ phía sau lỗi |
+| User-Agent | Chuỗi client tự giới thiệu mình là chương trình gì, ví dụ `curl/8.5.0` |
+| Keep-alive | Giữ một kết nối TCP để gửi nhiều yêu cầu liên tiếp, thay vì mở kết nối mới cho mỗi yêu cầu |
+| Flow | Tất cả gói tin của một kết nối giữa hai đầu (cùng IP, cổng, giao thức) |
+| Khóa ghép | Bộ giá trị dùng để tìm dòng log và flow tương ứng nhau |
+| Tầng ứng dụng | Tầng trên cùng của mạng, nơi có nội dung HTTP; số byte ở đây không tính header TCP/IP |
+| Đồng bộ đồng hồ | Chỉnh giờ các máy cho khớp nhau, thường bằng NTP, để thời điểm trong log và trong PCAP so được với nhau |
+| SYN scan | Kiểu quét cổng chỉ gửi gói mở kết nối rồi bỏ, không hoàn tất kết nối, nên không tới được tầng ứng dụng |
+| Quét dò phiên bản dịch vụ | Nmap kết nối hẳn vào cổng và gửi thử dữ liệu để đoán phần mềm đang chạy (`nmap -sV`); kiểu này để lại dòng trong access log |
+| Xoay vòng log (log rotation) | Đóng file log hiện tại, đổi tên (thường kèm nén `.gz`) và bắt đầu file mới |
+| Beaconing | Bot định kỳ gọi về máy chủ điều khiển theo chu kỳ đều |
+| Báo động giả | Cảnh báo khi thực ra không có tấn công |

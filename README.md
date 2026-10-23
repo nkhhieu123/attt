@@ -119,3 +119,37 @@ python -m nids.log_compare data/service_logs/<run_id>/access_nids.log output/log
 - Tham số chỉnh trong `config/default.yaml`, không viết cứng trong mã.
 - Mỗi quyết định kỹ thuật thêm một mục vào `docs/03_nhat_ky_quyet_dinh.md`.
 - Chỉ thử nghiệm trong mạng lab cô lập; giao tiếp botnet mô phỏng bằng thông điệp vô hại.
+- Mỗi file Markdown kết thúc bằng mục **Thuật ngữ**: bảng giải thích ngắn các
+  thuật ngữ dùng trong file đó. File mới phải có mục này; khi sửa file mà thêm
+  thuật ngữ mới thì bổ sung vào bảng.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Học máy (machine learning) | Cách cho máy tính tự rút ra quy luật từ dữ liệu mẫu thay vì lập trình từng quy tắc bằng tay |
+| Lưu lượng mạng (traffic) | Toàn bộ gói tin đi qua mạng trong một khoảng thời gian |
+| Module | Một phần độc lập của hệ thống, làm một việc riêng. Dự án có ba module phát hiện |
+| Anomaly (bất thường) | Hành vi khác xa trạng thái bình thường đã học. Module anomaly báo động khi thấy hành vi như vậy, dù không biết đó là tấn công gì |
+| Attack classification (phân loại tấn công) | Gán mỗi mẫu traffic vào một lớp đã biết: Benign (bình thường), Port Scan (quét cổng), DoS (làm nghẽn dịch vụ) |
+| Botnet | Mạng các máy bị nhiễm mã độc, cùng nhận lệnh từ kẻ điều khiển |
+| Topology | Hình dạng của mạng giao tiếp: tập trung (mọi máy nói chuyện với một máy chủ điều khiển) hay ngang hàng (các máy nói chuyện trực tiếp với nhau) |
+| Gaussian đa biến | Mô hình thống kê mô tả dữ liệu bình thường bằng giá trị trung bình và độ phân tán của nhiều đặc trưng cùng lúc; mẫu nằm quá xa vùng đó bị coi là bất thường |
+| Random Forest | Mô hình phân loại gồm nhiều cây quyết định; mỗi cây bỏ phiếu và lớp được nhiều phiếu nhất là kết quả |
+| Logistic Regression | Mô hình phân loại đơn giản, tính xác suất của mỗi lớp từ tổng có trọng số của các đặc trưng; dùng để so sánh với Random Forest |
+| Beaconing | Máy bị nhiễm định kỳ gọi về máy chủ điều khiển, ví dụ cứ 60 giây một lần, như đèn hiệu nhấp nháy đều đặn |
+| Đồ thị giao tiếp | Hình vẽ (theo nghĩa toán học) trong đó mỗi máy là một điểm, mỗi cặp máy có trao đổi là một đường nối |
+| Host | Một máy trong mạng, xác định bằng địa chỉ IP |
+| Dashboard | Trang giao diện hiển thị số liệu và cảnh báo trực quan |
+| CSV | File bảng dạng chữ, mỗi dòng một bản ghi, các cột cách nhau bằng dấu phẩy; mở được bằng Excel |
+| Terminal | Cửa sổ dòng lệnh, nơi gõ lệnh và xem chương trình in kết quả |
+| PCAP / PCAPNG | Hai định dạng file lưu gói tin bắt được trên mạng (xem docs/04) |
+| Kali Linux | Bản Linux chuyên cho kiểm thử bảo mật; là máy giám sát của lab |
+| Python, venv, pip | Python là ngôn ngữ lập trình của dự án; venv là môi trường ảo tách thư viện của dự án khỏi máy; pip là công cụ cài thư viện |
+| Unittest / kiểm thử | Đoạn mã tự động chạy chương trình với dữ liệu biết trước và kiểm tra kết quả đúng như mong đợi |
+| Config / YAML | Cấu hình là các tham số chỉnh được mà không sửa mã; YAML là định dạng file chữ dễ đọc dùng cho cấu hình |
+| Manifest | Bảng liệt kê mọi nguồn dữ liệu: lấy ở đâu, file nào, nhãn gì, dùng làm gì |
+| Lab cô lập | Mạng thử nghiệm riêng không nối ra Internet, để tấn công thử không ảnh hưởng ra ngoài |
+| Mã task Cxx-Txx | Mã công việc trong kế hoạch: Cxx là số chặng, Txx là số task trong chặng |

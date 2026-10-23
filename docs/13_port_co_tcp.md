@@ -74,3 +74,26 @@ tính là lệch.
 Phân bố cờ trên `donbot.pcap`: SYN 15 346, ACK 4 891, ACK+PSH 2 949, ACK+FIN
 397, SYN+ACK 275, ACK+RST 197. Số SYN lớn hơn nhiều SYN+ACK cho thấy bot thử
 kết nối hàng loạt; tỉ lệ này là ứng viên đặc trưng ở chặng 4.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Cổng (port) | Số 0–65535 chỉ chương trình nhận dữ liệu trên máy; cổng nguồn của client thường là số ngẫu nhiên lớn |
+| TCP / UDP / SCTP | Ba giao thức tầng 4 có cổng; SCTP ít gặp, dùng trong mạng viễn thông |
+| Cờ TCP | Các bit trong header TCP đánh dấu vai trò của gói |
+| SYN | Xin mở kết nối |
+| ACK | Xác nhận đã nhận dữ liệu |
+| FIN | Xin đóng kết nối một cách bình thường |
+| RST | Cắt ngang kết nối, thường do cổng đóng hoặc lỗi |
+| PSH | Yêu cầu đẩy dữ liệu lên ứng dụng ngay |
+| URG | Đánh dấu dữ liệu khẩn; hầu như không còn dùng |
+| ECE, CWR, AE | Ba cờ báo nghẽn mạng (ECN); AE trước đây gọi là NS |
+| Bit dự trữ | Bit chưa được giao nhiệm vụ trong chuẩn, phải bằng 0 |
+| Data Offset | Trường cho biết header TCP dài bao nhiêu |
+| Checksum | Số kiểm tra lỗi của gói |
+| Bắt tay ba bước | Cách mở kết nối TCP: SYN → SYN+ACK → ACK |
+| Gói lỗi ICMP (port unreachable) | Gói ICMP báo cổng đích không mở; nó chép lại phần đầu của gói gốc |
+| snaplen | Số byte tối đa được lưu cho mỗi gói |

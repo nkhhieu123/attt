@@ -113,3 +113,24 @@ nhãn riêng.
 - Cột `muc_dich` của CIC-IDS2017 và lab ghi `train;validation;test` vì việc
   chia được thực hiện bên trong nguồn (theo khối thời gian hoặc theo lần chạy)
   và chốt ở chặng 5.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Manifest | Bảng liệt kê mọi nguồn dữ liệu: lấy từ đâu, file nào, nhãn gì, dùng làm gì |
+| CSV | File bảng dạng chữ, các cột cách nhau bằng dấu phẩy |
+| Bài toán | Việc mà dữ liệu phục vụ, ứng với một module: anomaly, attack_classification, botnet_topology, hoặc chỉ để đối chiếu |
+| Nhãn gốc / nhãn đồ án | Tên nhãn trong bộ dữ liệu / tên nhãn mà đồ án dùng |
+| Đối chiếu (`doi_chieu`) | Dữ liệu chỉ dùng để kiểm tra chéo, không đưa vào mô hình |
+| Train / validation / test | Dữ liệu để học / để chọn tham số và ngưỡng / để đánh giá cuối |
+| Gaussian | Mô hình phát hiện bất thường của module anomaly |
+| Ngưỡng | Giá trị điểm mà vượt qua thì cảnh báo |
+| Biến thể kịch bản | Một cách chạy cụ thể của kịch bản, ví dụ quét chậm và quét nhanh là hai biến thể của kịch bản quét cổng |
+| Đối chứng | Hành vi lành tính trông giống tấn công, để kiểm tra mô hình không cảnh báo nhầm |
+| Kênh điều khiển IRC / HTTP | Đường bot nhận lệnh, qua giao thức chat IRC hoặc qua web |
+| NETRESEC | Trang web liệt kê liên kết tới nhiều kho PCAP công khai; không phải một bộ dữ liệu |
+| Nhật ký lần chạy | File ghi mỗi lần thử nghiệm trong lab: thời gian, máy tham gia, hành vi; là căn cứ gán nhãn |
+| Git | Công cụ quản lý phiên bản mã nguồn; dữ liệu lớn không đưa lên git |

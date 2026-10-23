@@ -53,3 +53,47 @@ mục trong kịch bản. Cột "Chặng" để trống cho tới khi chốt k�
 
 - Dùng mã độc thật hoặc thử nghiệm ngoài mạng lab.
 - Tự động chặn hoặc phản ứng với tấn công; hệ thống chỉ phát hiện và ghi cảnh báo.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Yêu cầu bắt buộc / tùy chọn | Bắt buộc là phải làm mới đạt đề bài; tùy chọn là làm thêm nếu có điều kiện |
+| Kali Linux | Bản Linux chuyên cho kiểm thử bảo mật; là máy giám sát của lab |
+| Bắt gói tin (capture) | Ghi lại các gói tin đi qua card mạng vào file |
+| Flow hai chiều | Tất cả gói tin qua lại giữa hai đầu của một kết nối (cùng IP, cổng, giao thức), gộp cả chiều đi và chiều về |
+| Timeout | Khoảng thời gian không có gói mới thì coi flow đã kết thúc |
+| Đặc trưng (feature) | Con số tính từ dữ liệu để đưa vào mô hình, ví dụ số gói, số cổng đích khác nhau |
+| Cửa sổ, bước | Cửa sổ là đoạn thời gian cố định để gom số liệu (ví dụ 10 giây); bước là khoảng dời cửa sổ mỗi lần (ví dụ 2 giây), nên các cửa sổ chồng lên nhau |
+| Beaconing | Máy bị nhiễm định kỳ gọi về máy chủ điều khiển theo chu kỳ đều |
+| Gaussian đa biến | Mô hình thống kê mô tả dữ liệu bình thường; mẫu nằm quá xa bị coi là bất thường |
+| Điểm bất thường (score) | Con số cho biết mẫu khác bình thường bao nhiêu; vượt ngưỡng thì cảnh báo |
+| Random Forest, Logistic Regression | Hai mô hình phân loại; Random Forest gồm nhiều cây quyết định bỏ phiếu, Logistic Regression tính xác suất từ tổng có trọng số |
+| Benign / Port Scan / DoS | Bình thường / quét cổng (dò xem máy mở những cổng nào) / tấn công từ chối dịch vụ (làm máy chủ quá tải) |
+| DDoS | DoS phân tán: nhiều máy cùng tấn công một đích |
+| SYN, ICMP | SYN là gói mở kết nối TCP; tấn công SYN gửi ồ ạt gói này mà không hoàn tất kết nối. ICMP là giao thức của lệnh ping; tấn công ICMP gửi ồ ạt gói ping |
+| Botnet, host nghi vấn | Botnet là mạng máy bị nhiễm cùng nghe lệnh; host nghi vấn là máy có hành vi giống bot |
+| Topology tập trung / ngang hàng (P2P) | Tập trung: các bot cùng nói chuyện với một máy điều khiển. Ngang hàng: các bot nói chuyện trực tiếp với nhau, không có máy trung tâm |
+| Peer | Một máy ngang hàng trong mạng P2P |
+| Cổng lọc | Bước bắt buộc phải qua trước; ở đây nghĩa là module anomaly không quyết định thay cho hai module kia |
+| CIC-IDS2017, CTU-13 | Hai bộ dữ liệu công khai có nhãn: CIC-IDS2017 về tấn công mạng, CTU-13 về botnet |
+| Scenario | Một lần thu dữ liệu riêng trong CTU-13, mỗi lần với một loại bot |
+| Nhãn, gán nhãn | Nhãn là đáp án đúng của mỗi mẫu (bình thường hay tấn công gì); gán nhãn là việc ghi đáp án đó |
+| Train / validation / test | Ba phần dữ liệu: train để mô hình học, validation để chọn tham số và ngưỡng, test để đánh giá cuối cùng |
+| Tiền xử lý | Biến đổi dữ liệu trước khi đưa vào mô hình, ví dụ đưa các đặc trưng về cùng thang đo |
+| Realtime | Chạy trực tiếp trên traffic đang diễn ra, trái với offline là chạy trên file đã lưu |
+| Node | Một máy trong mạng lab |
+| Mirror traffic | Cấu hình switch sao chép mọi gói đi qua sang cổng của máy giám sát, để Kali thấy được traffic của các máy khác |
+| Nmap | Công cụ quét cổng phổ biến |
+| Báo động giả | Hệ thống cảnh báo trong khi thực ra không có tấn công (false positive) |
+| Đối chứng | Lần chạy có hành vi lành tính trông giống tấn công, để kiểm tra mô hình không cảnh báo nhầm |
+| Precision / Recall / F1 | Precision: trong các cảnh báo, bao nhiêu phần đúng. Recall: trong các tấn công thật, bắt được bao nhiêu phần. F1: điểm gộp cân bằng hai chỉ số trên |
+| Macro-F1 | Trung bình F1 của từng lớp, mỗi lớp nặng như nhau, để lớp ít mẫu không bị lấn át |
+| Confusion matrix | Bảng đếm mỗi lớp thật bị đoán thành lớp nào; đường chéo là đoán đúng |
+| Độ trễ phát hiện | Thời gian từ lúc tấn công bắt đầu tới cảnh báo đúng đầu tiên |
+| Mất gói | Gói đi qua mạng nhưng máy giám sát không kịp ghi lại |
+| Notebook | File Jupyter chứa mã, kết quả và biểu đồ xen kẽ, dùng cho huấn luyện và phân tích |
+| Script | Chương trình nhỏ chạy bằng một lệnh |
+| Dashboard | Trang giao diện hiển thị số liệu và cảnh báo trực quan |

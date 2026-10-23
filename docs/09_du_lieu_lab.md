@@ -135,3 +135,27 @@ Nhật ký lần chạy phải có:
 - DDoS nhiều nguồn (T01) và DoS bằng ICMP (T02), trừ khi quyết định bổ sung.
 - Tấn công dò mật khẩu, khai thác lỗ hổng: không thuộc ba lớp của module phân
   loại.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Lab 7 node | Mạng thử nghiệm riêng gồm 7 máy, không nối ra Internet |
+| Kịch bản / biến thể | Kịch bản là loại hành vi cần thu (bình thường, quét cổng, ...); biến thể là một cách chạy cụ thể của kịch bản đó |
+| Cổng mirror | Cổng của switch nhận bản sao mọi gói đi qua, để Kali thấy traffic của các máy khác |
+| Server điều phối | Máy đóng vai trung tâm điều khiển bot trong botnet mô phỏng |
+| Nmap | Công cụ quét cổng |
+| DoS, SYN, ICMP | DoS là làm máy chủ quá tải. SYN là gói mở kết nối TCP; DoS SYN gửi ồ ạt gói này. ICMP là giao thức của ping |
+| Cờ TCP, kết nối không hoàn tất | Cờ TCP là các bit đánh dấu vai trò của gói (mở, xác nhận, đóng kết nối); kết nối không hoàn tất là có SYN nhưng không có trao đổi tiếp theo |
+| Beaconing, chu kỳ cố định / biến thiên | Bot gọi về máy điều khiển đều đặn; chu kỳ cố định là luôn cùng khoảng cách, biến thiên là khoảng cách dao động |
+| Peer, ngang hàng | Các máy nói chuyện trực tiếp với nhau, không qua máy trung tâm |
+| Đối chứng | Hành vi lành tính trông giống tấn công, để kiểm tra mô hình không cảnh báo nhầm |
+| Train / val / test | Lần chạy để học / để chọn tham số và ngưỡng / để đánh giá cuối |
+| Mã lần chạy (run_id) | Tên của một lần chạy, dạng `<biến thể>-<vai trò>-<số>` |
+| Độ lệch đồng hồ | Chênh lệch giờ giữa hai máy |
+| tcpdump | Công cụ bắt gói dòng lệnh; khi dừng nó in số gói bắt được và số gói bị bỏ |
+| Xoay vòng log | Đóng file log hiện tại và bắt đầu file mới, để mỗi lần chạy có một file riêng |
+| Ngưỡng | Giá trị điểm mà vượt qua thì cảnh báo |
+| DDoS | DoS từ nhiều nguồn cùng lúc |

@@ -86,3 +86,27 @@ về timestamp, `frame.len`, địa chỉ nguồn/đích, số hiệu giao thứ
 
 Hai file CTU-13 chỉ có IPv4, nên phần IPv6 mới được kiểm tra trên file tổng
 hợp. Cần kiểm tra lại khi có PCAP lab thật.
+
+## Thuật ngữ
+
+Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
+
+| Thuật ngữ | Giải thích |
+|---|---|
+| Trích xuất | Lấy ra các trường cần dùng từ byte thô của gói |
+| Tầng liên kết, header | Tầng thấp nhất như Ethernet; header là phần đầu chứa thông tin điều khiển |
+| IPv4 / IPv6 | Hai phiên bản giao thức địa chỉ Internet |
+| Dạng rút gọn IPv6 | Cách viết ngắn bỏ các nhóm số 0, ví dụ `fe80:0:0:0:0:0:0:1` thành `fe80::1` |
+| Số hiệu giao thức | Số trong header IP cho biết bên trong là gì: 1 ICMP, 6 TCP, 17 UDP, 58 ICMPv6 |
+| ICMP / ICMPv6 | Giao thức báo lỗi và kiểm tra kết nối (lệnh ping) của IPv4 / IPv6 |
+| Total Length, Payload Length | Trường độ dài trong header IPv4 (cả gói IP) / IPv6 (phần sau header 40 byte) |
+| Phân mảnh (fragment) | Gói IP quá lớn bị chia thành nhiều mảnh nhỏ; chỉ mảnh đầu có header TCP/UDP |
+| l4_offset | Vị trí bắt đầu của header tầng 4 (TCP/UDP) trong gói |
+| Phần đệm (padding) | Byte 0 thêm vào cho khung Ethernet đủ tối thiểu 60 byte |
+| VLAN, QinQ | Thẻ chia mạng logic; QinQ là hai thẻ VLAN lồng nhau |
+| Linux cooked | Header giả của Linux khi bắt trên mọi card mạng (`tcpdump -i any`) |
+| Loopback, IP thô | Card ảo cho máy nói chuyện với chính nó / file chỉ có gói IP, không có tầng liên kết |
+| Header mở rộng IPv6 | Các header phụ có thể nằm giữa header IPv6 và TCP/UDP (Hop-by-Hop, Routing, Fragment, ...) |
+| Đường hầm (tunnel) | Gói IP được bọc trong một gói khác (IP trong IP, GRE, VXLAN) |
+| ARP, 802.11 | Giao thức hỏi địa chỉ MAC / chuẩn Wi-Fi |
+| frame.time_epoch | Tên trường thời điểm bắt gói trong Wireshark |
