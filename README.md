@@ -1,4 +1,6 @@
-# attt
+# ml-nids
+
+**Machine Learning-Based Network Intrusion Detection Using Network Traffic Data**
 
 Đồ án: **Ứng dụng học máy phát hiện tấn công mạng dựa trên dữ liệu lưu lượng mạng**.
 
@@ -153,3 +155,4 @@ Giải thích ngắn các thuật ngữ dùng trong tài liệu này.
 | Manifest | Bảng liệt kê mọi nguồn dữ liệu: lấy ở đâu, file nào, nhãn gì, dùng làm gì |
 | Lab cô lập | Mạng thử nghiệm riêng không nối ra Internet, để tấn công thử không ảnh hưởng ra ngoài |
 | Mã task Cxx-Txx | Mã công việc trong kế hoạch: Cxx là số chặng, Txx là số task trong chặng |
+| NIDS | Network Intrusion Detection System: hệ thống phát hiện xâm nhập mạng, theo dõi lưu lượng để phát hiện tấn công. Tên dự án `ml-nids` nghĩa là NIDS dùng học máy |

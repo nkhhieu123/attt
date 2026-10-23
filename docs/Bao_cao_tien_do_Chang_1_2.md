@@ -5,7 +5,7 @@ mạng
 
 | Mục | Thông tin |
 |---|---|
-| Kho mã nguồn | https://github.com/nkhhieu123/attt (nhánh `main`) |
+| Kho mã nguồn | https://github.com/nkhhieu123/ml-nids (nhánh `main`; tên cũ `attt`) |
 | Ngày báo cáo | 15/10/2026 |
 | Chặng đã làm | Chặng 1 — Chốt yêu cầu và khởi tạo dự án; Chặng 2 — Khảo sát dữ liệu và định dạng |
 | Trạng thái | Chặng 1: xong 5/5 task. Chặng 2: xong 6/6 task. Chặng 3–12 chưa bắt đầu |
