@@ -28,6 +28,8 @@ Tổng quan bộ dữ liệu, mô hình và dữ liệu chuẩn: [docs/10_tong_q
 - [x] C01-T04: Tạo môi trường Python, dependencies và .gitignore — `pyproject.toml`, `requirements.txt`, `.gitignore`
 - [x] C01-T05: Tạo README, cấu hình chung và nhật ký quyết định kỹ thuật — `config/default.yaml`, [docs/03_nhat_ky_quyet_dinh.md](docs/03_nhat_ky_quyet_dinh.md)
 
+Báo cáo Chặng 1: [docs/Bao_cao_Chang_1.md](docs/Bao_cao_Chang_1.md)
+
 ### Chặng 2 — Khảo sát dữ liệu và định dạng
 
 - [x] C02-T01: Mô tả Global Header, Packet Header, Packet Data của PCAP; phân biệt với PCAPNG — [docs/04_dinh_dang_pcap.md](docs/04_dinh_dang_pcap.md)
@@ -37,7 +39,7 @@ Tổng quan bộ dữ liệu, mô hình và dữ liệu chuẩn: [docs/10_tong_q
 - [x] C02-T05: Tạo manifest: nguồn, file, thời gian, nhãn, mục đích sử dụng — `config/data_manifest.csv`, `src/nids/manifest.py`, [docs/08_manifest_du_lieu.md](docs/08_manifest_du_lieu.md)
 - [x] C02-T06: Chốt dữ liệu còn phải tự thu trong lab — [docs/09_du_lieu_lab.md](docs/09_du_lieu_lab.md)
 
-Báo cáo tiến độ Chặng 1 và 2: [docs/Bao_cao_tien_do_Chang_1_2.md](docs/Bao_cao_tien_do_Chang_1_2.md)
+Báo cáo Chặng 2: [docs/Bao_cao_Chang_2.md](docs/Bao_cao_Chang_2.md)
 
 ### Chặng 3 — Chuyển PCAP và log thành dữ liệu có cấu trúc
 
@@ -47,6 +49,11 @@ Báo cáo tiến độ Chặng 1 và 2: [docs/Bao_cao_tien_do_Chang_1_2.md](docs
 - [x] C03-T04: Xử lý packet không hỗ trợ, lỗi và thống kê bỏ qua — `src/nids/packets.py`, [docs/14_goi_bo_qua.md](docs/14_goi_bo_qua.md)
 - [x] C03-T05: Viết parser cho log dịch vụ đã chọn (access log Nginx) — `src/nids/service_log.py`, [docs/15_parser_log.md](docs/15_parser_log.md)
 - [x] C03-T06: Xuất dữ liệu log thành bảng; đối chiếu một số dòng với bản gốc — `src/nids/log_compare.py`, [docs/16_xuat_doi_chieu_log.md](docs/16_xuat_doi_chieu_log.md)
+- [x] C03-T07: Đối chiếu kết quả đọc packet với Wireshark — `src/nids/wireshark_compare.py`, [docs/17_doi_chieu_wireshark.md](docs/17_doi_chieu_wireshark.md)
+
+Báo cáo Chặng 3: [docs/Bao_cao_Chang_3.md](docs/Bao_cao_Chang_3.md)
+
+Những gì còn thiếu sau Chặng 1–3 (dữ liệu, lab, tham số chưa chốt): [docs/Viec_con_thieu_Chang_1_3.md](docs/Viec_con_thieu_Chang_1_3.md)
 
 ## Cấu trúc
 
@@ -63,6 +70,7 @@ src/nids/
                       thống kê gói bỏ qua
   service_log.py      Đọc access log Nginx định dạng nids, xuất CSV
   log_compare.py      Đối chiếu bảng CSV của log với file gốc
+  wireshark_compare.py  Đối chiếu kết quả đọc packet với tshark
   alerts.py           Schema cảnh báo, xuất terminal + CSV
 tests/                Kiểm thử
 scripts/              Script đọc PCAP, sinh traffic mô phỏng (chưa có)
@@ -110,6 +118,9 @@ python -m nids.pcap_reader data/pcap/<file>.pcap -n 10
 
 # Trích xuất bảng gói IP ra CSV, kèm thống kê gói bỏ qua
 python -m nids.packets data/pcap/<file>.pcap --csv output/packets.csv --stats output/packets_stats.json
+
+# Đối chiếu từng packet với Wireshark (cần cài Wireshark/tshark)
+python -m nids.wireshark_compare data/pcap/<file>.pcap --report output/ws_compare.json
 
 # Đọc access log Nginx của một lần chạy, xuất bảng CSV rồi đối chiếu với file gốc
 python -m nids.service_log data/service_logs/<run_id>/access_nids.log --csv output/log.csv
