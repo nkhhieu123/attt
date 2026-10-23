@@ -1,4 +1,5 @@
-"""Đọc access log Nginx định dạng `nids` thành bản ghi có cấu trúc (C03-T05).
+"""Đọc access log Nginx định dạng `nids` thành bản ghi có cấu trúc (C03-T05)
+và xuất ra bảng CSV (C03-T06).
 
 Định dạng và ý nghĩa 12 trường mô tả trong docs/05_log_dich_vu.md:
 
@@ -18,7 +19,9 @@ qua kèm lý do và được đếm trong LogStats, giống cách packets.py x�
 """
 
 import argparse
+import csv
 import gzip
+import json
 import re
 import sys
 from collections import Counter
@@ -55,7 +58,7 @@ SKIP_LAST_PARTIAL = "dong_cuoi_do_dang"  # dòng cuối không có ký tự xu�
 
 # Điểm bất thường của dòng vẫn được giữ
 NOTE_BAD_REQUEST = "dong_yeu_cau_khong_hop_le"  # dòng yêu cầu không phải "METHOD target HTTP/x"
-NOTE_TS_BACKWARDS = "thoi_gian_giam"            # ts nhỏ hơn dòng trước (nhiều worker ghi xen kẽ)
+NOTE_TS_BACKWARDS = "thoi_gian_giam"            # ts nhỏ hơn dòng trước (nhiều worker, đồng hồ bị chỉnh)
 
 
 @dataclass(frozen=True)
@@ -287,6 +290,48 @@ def read_log(path, stats: LogStats | None = None):
                 yield result.record
 
 
+# Cột của bảng CSV. ts giữ đúng dạng $msec ("giây.mili giây") để đối chiếu được
+# với dòng gốc; start_ts là ts - request_time, dùng khi ghép với flow.
+CSV_COLUMNS = (
+    "line_no", "ts", "start_ts", "client_ip", "client_port", "server_port",
+    "request", "method", "target", "http_version", "status", "body_bytes",
+    "request_bytes", "request_time_ms", "conn_id", "conn_requests", "user_agent",
+    "valid_request",
+)
+
+
+def _msec(ts_ns):
+    sec, rest = divmod(ts_ns, 10**9)
+    return f"{sec}.{rest // 10**6:03d}"
+
+
+def csv_row(rec: LogRecord) -> dict:
+    """Một dòng của bảng CSV; ô trống khi giá trị là None."""
+    row = {
+        "line_no": rec.line_no, "ts": _msec(rec.ts_ns), "start_ts": _msec(rec.start_ts_ns),
+        "client_ip": rec.client_ip, "client_port": rec.client_port,
+        "server_port": rec.server_port, "request": rec.request, "method": rec.method,
+        "target": rec.target, "http_version": rec.http_version, "status": rec.status,
+        "body_bytes": rec.body_bytes, "request_bytes": rec.request_bytes,
+        "request_time_ms": rec.request_time_ms, "conn_id": rec.conn_id,
+        "conn_requests": rec.conn_requests, "user_agent": rec.user_agent,
+        "valid_request": int(rec.valid_request),
+    }
+    return {col: "" if row[col] is None else row[col] for col in CSV_COLUMNS}
+
+
+def write_csv(records, path) -> int:
+    """Ghi các bản ghi ra CSV UTF-8; trả về số dòng đã ghi."""
+    n = 0
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        for rec in records:
+            writer.writerow(csv_row(rec))
+            n += 1
+    return n
+
+
 def _format_ts(ts_ns):
     sec, ns = divmod(ts_ns, 10**9)
     return datetime.fromtimestamp(sec, timezone.utc).strftime("%Y-%m-%dT%H:%M:%S") + f".{ns // 10**6:03d}Z"
@@ -297,6 +342,8 @@ def main(argv=None):
         description="Đọc access log Nginx định dạng nids và in tóm tắt."
     )
     parser.add_argument("file", help="đường dẫn access_nids.log (hoặc bản .gz)")
+    parser.add_argument("--csv", help="ghi bảng dòng log ra file CSV")
+    parser.add_argument("--stats", help="ghi thống kê dòng bỏ qua ra file JSON")
     parser.add_argument("-n", "--count", type=int, default=10,
                         help="số dòng đầu tiên được in (mặc định: %(default)s)")
     args = parser.parse_args(argv)
@@ -304,14 +351,30 @@ def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     stats = LogStats()
-    for rec in read_log(args.file, stats):
-        if stats.kept <= args.count:
-            req = rec.request if len(rec.request) <= 60 else rec.request[:57] + "..."
-            print(f"{rec.line_no:>6}  {_format_ts(rec.ts_ns)}  {rec.client_ip}:{rec.client_port}"
-                  f" -> :{rec.server_port}  {req!r}  {rec.status}  {rec.request_time_ms} ms"
-                  f"  conn={rec.conn_id}/{rec.conn_requests}")
+
+    def shown(records):
+        for rec in records:
+            if stats.kept <= args.count:
+                req = rec.request if len(rec.request) <= 60 else rec.request[:57] + "..."
+                print(f"{rec.line_no:>6}  {_format_ts(rec.ts_ns)}  {rec.client_ip}:{rec.client_port}"
+                      f" -> :{rec.server_port}  {req!r}  {rec.status}  {rec.request_time_ms} ms"
+                      f"  conn={rec.conn_id}/{rec.conn_requests}")
+            yield rec
+
+    records = shown(read_log(args.file, stats))
+    if args.csv:
+        write_csv(records, args.csv)
+    else:
+        for _ in records:
+            pass
     print()
     print("\n".join(stats.summary_lines()))
+    if args.csv:
+        print(f"Đã ghi CSV: {args.csv}")
+    if args.stats:
+        with open(args.stats, "w", encoding="utf-8") as f:
+            json.dump(stats.as_dict(), f, ensure_ascii=False, indent=2)
+        print(f"Đã ghi thống kê: {args.stats}")
     return 0
 
 

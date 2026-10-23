@@ -1,0 +1,97 @@
+# C03-T06 — Xuất log thành bảng và đối chiếu với bản gốc
+
+Mã nguồn: `src/nids/service_log.py` (`csv_row()`, `write_csv()`, tùy chọn
+`--csv`, `--stats`) và `src/nids/log_compare.py`. Kiểm thử:
+`tests/test_log_compare.py`. Parser: [15_parser_log.md](15_parser_log.md).
+
+## 1. Bảng CSV
+
+```bash
+python -m nids.service_log data/service_logs/<run_id>/access_nids.log \
+    --csv output/<run_id>_log.csv --stats output/<run_id>_log_stats.json
+```
+
+Mỗi dòng log đọc được thành một dòng CSV (UTF-8, có dòng tiêu đề). Dòng bị bỏ
+qua không có trong bảng nhưng được đếm trong file thống kê JSON.
+
+| Cột | Ví dụ | Ghi chú |
+|---|---|---|
+| `line_no` | `24` | Số dòng trong file gốc, khóa để đối chiếu |
+| `ts` | `1792748395.988` | Giữ đúng dạng `$msec` của dòng gốc |
+| `start_ts` | `1792748395.860` | `ts − request_time`: thời điểm bắt đầu yêu cầu, dùng khi ghép với flow |
+| `client_ip`, `client_port`, `server_port` | `127.0.0.1`, `49340`, `18080` | Cổng trống khi Nginx ghi `-` |
+| `request` | `GET /slow/a HTTP/1.1` | Dòng yêu cầu đã giải mã `\xHH` |
+| `method`, `target`, `http_version` | `GET`, `/slow/a`, `HTTP/1.1` | Trống khi yêu cầu không hợp lệ |
+| `status`, `body_bytes`, `request_bytes` | `200`, `12`, `66` | |
+| `request_time_ms` | `128` | Mili giây |
+| `conn_id`, `conn_requests` | `8`, `2` | Yêu cầu thứ 2 trên kết nối keep-alive số 8 |
+| `user_agent` | `kiểm "tra" \ UA` | Đã giải mã; trống khi Nginx ghi `-` |
+| `valid_request` | `1` | `0` khi dòng yêu cầu không có dạng `METHOD target HTTP/x` |
+
+Ô có ký tự điều khiển (dòng yêu cầu là byte TLS) được module `csv` đặt trong
+ngoặc kép; đọc lại bằng `csv` hoặc `pandas.read_csv` cho đúng chuỗi ban đầu.
+
+## 2. Cách đối chiếu
+
+```bash
+python -m nids.log_compare data/service_logs/<run_id>/access_nids.log output/<run_id>_log.csv -k 20
+```
+
+**Cách đọc độc lập.** Công cụ đối chiếu không dùng lại regex hay hàm giải mã
+của parser. Nó đọc lại dòng gốc theo `line_no`, tách 12 trường bằng cách duyệt
+từng ký tự, giải mã `\xHH` bằng codec `unicode_escape` có sẵn của Python, tính
+`start_ts` bằng `Decimal`. Kết quả phải trùng với từng ô của CSV. Nếu parser
+tách nhầm trường, lệch thứ tự cột hay làm tròn sai thì hai cách sẽ khác nhau.
+
+**Dòng được chọn** (mặc định): dòng đầu, dòng cuối, một dòng cho mỗi mã trạng
+thái, tối đa 5 dòng có yêu cầu không hợp lệ, và `k` dòng ngẫu nhiên với seed cố
+định 42 để chạy lại cho cùng mẫu. `--all` đối chiếu mọi dòng.
+
+**Kiểm tra cả bảng:** `line_no` tăng dần và không trùng, không vượt số dòng của
+file gốc; mọi dòng gốc tách được 12 trường đều phải có trong CSV (không sót dòng
+hợp lệ). Với dòng hợp lệ, `method`, `target`, `http_version` ghép lại phải ra
+đúng `request`.
+
+`--show N` in N dòng mẫu cạnh nhau (gốc / CSV) để xem bằng mắt. Lệnh trả mã
+thoát 1 nếu có lệch.
+
+## 3. Kết quả
+
+Dữ liệu là log thật do Nginx 1.26.3 ghi theo `log_format nids` trên máy phát
+triển (ngày 21 và 23/10/2026). Lab chưa dựng nên chưa có log của máy chủ dịch
+vụ.
+
+| Log | Dòng | Nội dung | Mẫu | Toàn bộ |
+|---|---|---|---|---|
+| Log thử tình huống (C03-T05) | 13 | 200, 400, 404, 408, 499, 502; byte TLS; tiếng Việt; dòng yêu cầu 3 000 byte | — | 13/13 khớp |
+| Log tải song song | 457 | 8 client song song, 217 yêu cầu keep-alive, 122 yêu cầu qua upstream chậm (tới 506 ms), 108 dòng không có User-Agent, 86 dòng UA có tiếng Việt và ký tự `"` `\`, 23 dòng yêu cầu không hợp lệ | 28/28 khớp | 457/457 khớp |
+
+Một số dòng trong mẫu đối chiếu của log 457 dòng:
+
+| Dòng | Trong log gốc | Trong CSV |
+|---|---|---|
+| 1 | `"GET /50x.html HTTP/1.1" 404 153 37 0.000 4 1 "-"` | `GET` / `/50x.html` / `HTTP/1.1`, status 404, `user_agent` trống |
+| 13 | `"GET /a%20b?q=%22 HTTP/1.1" ... "ki\xE1\xBB\x83m \x22tra\x22 \x5C UA"` | `target` giữ `%20`, `%22`; `user_agent` = `kiểm "tra" \ UA` |
+| 24 | `1792748395.988 ... "GET /slow/a HTTP/1.1" 200 12 66 0.128 8 2` | `start_ts` = `1792748395.860`, `request_time_ms` = 128, kết nối 8 yêu cầu thứ 2 |
+| 15 | `"OPTIONS / RTSP/1.0" 400` | `valid_request` = 0, `method`/`target` trống, `request` giữ nguyên |
+| 28 | `"\x16\x03\x01\x00\xA5" 400` | `request` = byte điều khiển `\x16\x03\x01\x00` và chữ `\xa5` (byte không phải UTF-8) |
+
+Dòng `OPTIONS / RTSP/1.0` chính là một mẫu dò của `nmap -sV`; đây là lý do giữ
+lại dòng yêu cầu không hợp lệ (mục 3 của tài liệu 15).
+
+**Kiểm thử tự động** (12 ca, tổng 92 ca): tách trường trên 12 dòng thật, dòng
+thiếu ngoặc và thừa trường, cột và ô trống của CSV, CSV giữ được ký tự điều
+khiển, đối chiếu toàn bộ khớp, và công cụ **phát hiện được** ô bị sửa (cổng,
+User-Agent, thời gian phục vụ), `line_no` bị lệch, dòng bị mất, `target` bị
+tách sai; mẫu luôn có dòng đầu, dòng cuối, mọi mã trạng thái và các yêu cầu
+không hợp lệ; mã thoát của lệnh.
+
+## 4. Nhận xét từ log thật
+
+- Trên log 457 dòng, `ts` không giảm lần nào nhưng `start_ts` nhỏ hơn dòng trước
+  90 lần. `$msec` là lúc ghi log nên tăng dần theo thứ tự ghi; yêu cầu chậm bắt
+  đầu sớm nhưng được ghi muộn. Khi ghép với flow theo thời điểm bắt đầu phải sắp
+  xếp lại theo `start_ts`.
+- `start_ts` chỉ chính xác tới mili giây, và `$request_time` tính từ khi Nginx
+  đọc byte đầu tiên của yêu cầu, không phải từ lúc bắt tay TCP. Cửa sổ ghép với
+  flow cần dung sai vài chục mili giây; chốt khi làm phần ghép ở chặng sau.

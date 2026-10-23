@@ -58,7 +58,7 @@ Ghi chú trên dòng vẫn được giữ:
 | Mã | Ý nghĩa |
 |---|---|
 | `dong_yeu_cau_khong_hop_le` | Dòng yêu cầu không có dạng `METHOD target HTTP/x`: byte nhị phân, yêu cầu dở dang, lệnh lạ. Đây thường là dấu vết quét dò dịch vụ (`nmap -sV`), nên **giữ lại** chứ không bỏ |
-| `thoi_gian_giam` | `ts` nhỏ hơn dòng trước. Nginx ghi log khi yêu cầu kết thúc, nên yêu cầu chậm có thể ghi sau yêu cầu nhanh bắt đầu muộn hơn; nhiều worker cũng ghi xen kẽ. Khi ghép với flow phải sắp xếp lại theo thời gian, không giả định log đã có thứ tự |
+| `thoi_gian_giam` | `ts` nhỏ hơn dòng trước. `$msec` là lúc ghi log nên với một worker luôn tăng dần; giảm chỉ khi nhiều worker ghi xen kẽ hoặc đồng hồ máy chủ bị chỉnh lùi. Thứ tự theo thời điểm **bắt đầu** (`start_ts_ns`) thì thường bị đảo, vì yêu cầu chậm bắt đầu sớm nhưng ghi muộn (log thật: 90 lần trên 457 dòng, xem [16_xuat_doi_chieu_log.md](16_xuat_doi_chieu_log.md)). Khi ghép với flow phải sắp xếp lại theo `start_ts_ns` |
 
 `LogStats` còn đếm theo mã trạng thái, giữ khoảng thời gian đầu–cuối, số dòng
 đầu tiên và tối đa 3 dòng mẫu cho mỗi lý do bỏ qua. Nếu không dòng nào đọc được
@@ -88,7 +88,8 @@ Ghi chú: dong_yeu_cau_khong_hop_le=3
 Theo mã trạng thái: 200=5, 400=2, 404=3, 408=1, 499=1, 502=1
 ```
 
-Xuất bảng CSV và đối chiếu từng dòng với bản gốc là task C03-T06.
+Xuất bảng CSV và đối chiếu từng dòng với bản gốc (C03-T06) mô tả ở
+[16_xuat_doi_chieu_log.md](16_xuat_doi_chieu_log.md).
 
 ## 5. Kiểm tra
 
